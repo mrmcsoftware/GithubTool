@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+GitHub Markdown Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
+</title>
+	<style>
+		button { margin: 1px; }
+		br { margin: 3px; }
+		body
+			{
+			background-color: black;
+			color: white;
+			/* Uncomment transition line for gradual dark/light mode change */
+			/* transition: color 300ms, background-color 300ms; */
+			}
+		/* rgba transparency may not work in IE */
+		.header { padding: 0px 0px; background: rgba(130,180,130,0.8); }
+		/* .header { padding: 0px 0px; background: rgba(0,0,0,0.5); } */
+		.sticky { position: fixed; top: 0px; width: 100%; }
+		a { text-decoration: none; }
+		a:hover { text-decoration: underline; }
+		a:link { color: #f0f000; }
+		a:visited { color: #00ff00; }
+		body.dark-mode
+			{
+			background-color: black;
+			color: white;
+			}
+		body.dark-mode a:link { color: #f0f000; }
+		body.dark-mode a:visited { color: #00ff00; }
+		body.dark-mode code { background-color: #404040; }
+		body.light-mode
+			{
+			background-color: #d0d0d0;
+			color: black;
+			}
+		body.light-mode a:link { color: #0000f0; }
+		body.light-mode a:visited { color: #a000a0; }
+		body.light-mode code { background-color: #ffffff; }
+		blockquote
+			{
+			/* background-color: #303030; */
+			/* background-color: #f0f0f0; */
+			border-left: .25em solid #5236a0;
+			margin: 0 0 0;
+			padding: 0 0 0 1.25em;
+			position: relative;
+			}
+		code { background-color: #404040; }
+	</style>
+</head>
+<body>
+<div class="header" id="headerID">
+<!--form id="myFormID"-->
+<button onclick="darkLightMode()" title="Darkmode/Lightmode Toggle"><div id="darkLightModeID">&#9788</div></button>&nbsp;&nbsp;&nbsp;
+<input type="checkbox" id="keepOnTopID" checked onclick="setKeepOnTop()" title="Toggle keeping control bar on top of page." style="margin: 0; padding: 0; height:10px"/> On Top&nbsp;&nbsp;&nbsp;&nbsp;
+<button onclick="seeHTML()" id="getHtmlID" title="Display the HTML code returned from github.com">See HTML</button>&nbsp;&nbsp;&nbsp;&nbsp;
+<input id="myFileID" name="files[]" multiple="" type="file"/>
+<!--button onclick="submitMarkdown()" title="Convert Markdown">MD</button-->
+<!--/form-->
+</div>
+<hr>
+<div id="data-0"></div>
+<div id="data-1"></div>
+	<script>
+		var keepontop=true;
+		var githubHtml="You need to load a file first";
+
+		function submitMarkdown(str)
+		{
+		var params={};
+		params.text=str;
+		var request=new XMLHttpRequest();
+		request.open('POST',"https://api.github.com/markdown",true);
+		request.setRequestHeader('Content-Type','application/json');
+		request.onload=function()
+			{
+			if ((request.status>=200)&&(request.status<400))
+				{
+				githubHtml=request.response;
+				var data1=document.getElementById("data-1");
+				data1.innerHTML=githubHtml;
+				}
+			else
+				{
+				document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+request.statusText+": "+JSON.parse(request.response).message+"</p>";
+				}
+			};
+		request.onerror=function(e)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+request.responseText||e.target.statusText||" Network Error "+"</p>";
+			};
+		request.send(JSON.stringify(params));
+		}
+
+		function seeHTML()
+		{
+		var newWin=window.open("","_blank");
+		if (newWin)
+			{
+			var html='<!DOCTYPE html><html><title>HTML</title><body bgcolor="#000000"><font color="#ffffff"><xmp>';
+			html+=githubHtml;
+			html+="</xmp></font></html>";
+			newWin.document.open();
+			newWin.document.write(html);
+			newWin.document.close();
+			}
+		}
+
+		// can do first one if form defined
+		//document.forms['myFormID'].elements['myFileID'].onchange=function(event)
+		document.getElementById("myFileID").onchange=function(event)
+			{
+			if (!window.FileReader) { return; } // Browser is not compatible
+			var reader=new FileReader();
+			reader.onload=function(event)
+				{
+				if (event.target.readyState!=2) { return; }
+				if (event.target.error) { alert('Error while reading file'); return; }
+				submitMarkdown(event.target.result);
+				};
+			reader.readAsText(event.target.files[0]);
+			};
+
+		function darkLightMode()
+		{
+		var btn=document.getElementById("darkLightModeID");
+		var c=document.body.className;
+		// Toggle modes based on what the button currently is
+		if ((c=="dark-mode")||(c==""))
+			{
+			document.body.className="light-mode"; btn.innerHTML="&#9789";
+			}
+		else
+			{
+			document.body.className="dark-mode"; btn.innerHTML="&#9788";
+			}
+		}
+
+		function setKeepOnTop()
+		{
+		// both will work
+		//keepontop=($('#keepOnTopID').prop('checked'));
+		keepontop=(document.querySelector('#keepOnTopID').checked);
+		}
+
+		window.onscroll=function() { scrollIt() };
+
+		var header=document.getElementById("headerID");
+		var sticky=header.offsetTop;
+
+		function scrollIt()
+		{
+		if (!keepontop) { return; }
+		if (window.pageYOffset>sticky) { header.classList.add("sticky"); }
+		else { header.classList.remove("sticky"); }
+		}
+	</script>
+</body>
+</html>

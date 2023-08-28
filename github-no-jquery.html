@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
+</title>
+	<style>
+		button { margin: 1px; }
+		br { margin: 3px; }
+		body
+			{
+			background-color: black;
+			color: white;
+			/* Uncomment transition line for gradual dark/light mode change */
+			/* transition: color 300ms, background-color 300ms; */
+			}
+		.header { padding: 4px 0px; }
+		.sticky { position: fixed; top: 8px; width: 100%; }
+		a { text-decoration: none; }
+		a:hover { text-decoration: underline; }
+		a:link { color: #f0f000; }
+		a:visited { color: #00ff00; }
+		body.dark-mode
+			{
+			background-color: black;
+			color: white;
+			}
+		body.dark-mode a:link { color: #f0f000; }
+		body.dark-mode a:visited { color: #00ff00; }
+		body.light-mode
+			{
+			background-color: #d0d0d0;
+			color: black;
+			}
+		body.light-mode a:link { color: #0000f0; }
+		body.light-mode a:visited { color: #a000a0; }
+		.modal
+			{
+			display: none;
+			position: fixed;
+			z-index: 1;
+			padding-top: 100px;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			overflow: auto;
+			background-color: rgb(0,0,0);
+			background-color: rgba(0,0,0,0.4);
+			}
+		.modal-content
+			{
+			position: relative;
+			background-color: #171717;
+			margin: auto;
+			padding: 0;
+			border: 2px solid #6797ff;
+			width: 40%;
+			box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+			}
+		.close
+			{
+			color: white;
+			float: right;
+			font-size: 18px;
+			font-weight: bold;
+			}
+		.close:hover,
+		.close:focus
+			{
+			color: #ff4040;
+			text-decoration: none;
+			cursor: pointer;
+			}
+		.modal-header
+			{
+			padding: 2px 16px;
+			background-color: #1022e4;
+			color: white;
+			font-size: 14px;
+			font-weight: bold;
+			}
+		.modal-body { padding: 2px 16px; color: white; font-size: 12px; }
+	</style>
+</head>
+<body>
+	<script>
+		var path="";
+		var colors=["#00ffff","#ffffff","#206fff","#ffff00","#ffffff","#000000","#404040"];
+		var sel=-1;
+		var dform=true;
+		var keepontop=true;
+		var openonly=false;
+		var dirbut=true;
+		var urlstore=[undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined];
+		var links="";
+		var data0;
+
+		window.onload=function()
+		{
+		data0=document.getElementById("data-0");
+		for (var vObj={},i=0,vArr=window.location.search.substring(1).split('&');i<vArr.length;v=vArr[i++].split('='),vObj[v[0]]=v[1]) { }
+		if (vObj.dark==="false") { darkLightMode(); }
+		if (vObj.repo)
+			{
+			document.getElementById("searchTextID").value=vObj.repo;
+			getRepo();
+			}
+		if (vObj.dform==="false") { dform=false; }
+		if (vObj.dirbut==="false") { dirbut=false; }
+		if (vObj.ref) { document.getElementById("refID").value=vObj.ref; }
+		if (vObj.keepontop==false) { document.querySelector('#keepOnTopID').checked=false; }
+		if (vObj.openonly==true) { document.querySelector('#openOnlyID').checked=true; }
+		if (vObj.contents) { document.getElementById("searchTextID").value=vObj.contents; getRepo(); }
+		if (vObj.branches) { document.getElementById("searchTextID").value=vObj.branches; getBranches(); }
+		if (vObj.commits) { document.getElementById("searchTextID").value=vObj.commits; getCommits(); }
+		if (vObj.releases) { document.getElementById("searchTextID").value=vObj.releases; getReleases(); }
+		if (vObj.issues) { document.getElementById("searchTextID").value=vObj.issues; getIssues(); }
+		if (vObj.pulls) { document.getElementById("searchTextID").value=vObj.pulls; getPulls(); }
+		if (vObj.info) { document.getElementById("searchTextID").value=vObj.info; getInfoMetrics(); }
+		if (vObj.user) { document.getElementById("searchTextID").value=vObj.user; getUserInfo(); }
+		if (vObj.searchrepos) { document.getElementById("searchTextID").value=vObj.searchrepos; searchRepos(); }
+		if (vObj.searchusers) { document.getElementById("searchTextID").value=vObj.searchusers; searchUsers(); }
+		if (vObj.expandinput==="true") { document.getElementById("searchTextID").size=32; document.getElementById("refID").size=12; }
+		}
+
+		function setKeepOnTop()
+		{
+		keepontop=(document.querySelector('#keepOnTopID').checked);
+		}
+
+		function setOpenOnly()
+		{
+		openonly=(document.querySelector('#openOnlyID').checked);
+		}
+
+		function myAlert(msg,title)
+		{
+		var modal=document.getElementById("ModalID");
+		var span=document.getElementsByClassName("close")[0];
+		var modalBody=document.getElementById("modalBodyID");
+		var modalHeader=document.getElementById("modalHeaderID");
+		modalBody.innerHTML=msg;
+		modalHeader.innerHTML=title;
+		modal.style.display="block";
+		span.onclick=function() { modal.style.display="none"; }
+		}
+
+		function darkLightMode()
+		{
+		var btn=document.getElementById("darkLightModeID");
+		var c=document.body.className;
+		// Toggle modes based on what the button currently is
+		if ((c=="dark-mode")||(c==""))
+			{
+			document.body.className="light-mode"; btn.innerHTML="&#9789";
+			colors=["#000000","#004000","#0000ff","#400000","#000000","#d0d0d0","#ffffff"];
+			}
+		else
+			{
+			document.body.className="dark-mode"; btn.innerHTML="&#9788";
+			colors=["#00ffff","#ffffff","#206fff","#ffff00","#ffffff","#000000","#404040"];
+			}
+		if (document.getElementById('data-1').innerHTML!=="")
+			{
+			// If there are already results showing, redo them with new theme
+			switch (sel)
+				{
+				case 0: getRepo(); break;
+				case 1: getBranches(urlstore[sel]); break;
+				case 2: getCommits(urlstore[sel]); break;
+				case 3: getReleases(urlstore[sel]); break;
+				case 4: getInfoMetrics(); break;
+				case 5: getUserInfo(urlstore[sel]); break;
+				case 6: searchRepos(urlstore[sel]); break;
+				case 7: searchUsers(urlstore[sel]); break;
+				case 8: getGists(urlstore[sel]); break;
+				case 9: getIssues(urlstore[sel]); break;
+				case 10: getPulls(urlstore[sel]); break;
+				}
+			}
+		}
+
+		function addPageLinks(links,procname)
+		{
+		var data1=document.getElementById("data-1");
+		data1.innerHTML+="<br>";
+		var tempstr=links.substring(0,links.indexOf('>; rel="last"'));
+		var lasturl=tempstr.substring(tempstr.lastIndexOf('<')+1);
+		var lastpage=lasturl.substring(lasturl.lastIndexOf('=')+1);
+		tempstr=links.substring(0,links.indexOf('>; rel="first"'));
+		var firsturl=tempstr.substring(tempstr.lastIndexOf('<')+1);
+		var firstpage=firsturl.substring(firsturl.lastIndexOf('=')+1);
+		tempstr=links.substring(0,links.indexOf('>; rel="next"'));
+		var nexturl=tempstr.substring(tempstr.lastIndexOf('<')+1);
+		var nextpage=nexturl.substring(nexturl.lastIndexOf('=')+1);
+		tempstr=links.substring(0,links.indexOf('>; rel="prev"'));
+		var prevurl=tempstr.substring(tempstr.lastIndexOf('<')+1);
+		var prevpage=prevurl.substring(prevurl.lastIndexOf('=')+1);
+		if (firsturl) { data1.innerHTML+="<button onclick='"+procname+"(\""+firsturl+"\")'>First ("+firstpage+")</button>"; }
+		if (prevurl) { data1.innerHTML+="<button onclick='"+procname+"(\""+prevurl+"\")'>Prev ("+prevpage+")</button>"; }
+		if (nexturl) { data1.innerHTML+="<button onclick='"+procname+"(\""+nexturl+"\")'>Next ("+nextpage+")</button>"; }
+		if (lasturl) { data1.innerHTML+="<button onclick='"+procname+"(\""+lasturl+"\")'>Last ("+lastpage+")</button>"; }
+		}
+
+		function getRepoKeyb(event)
+		{
+		if (event.keyCode==13) { path=""; getRepo(); }
+		}
+
+		function gotoRepoDirectory(dir)
+		{
+		// all work:
+		//if (dir==="..") { path=path.slice(0,path.lastIndexOf('/')); }
+		//if (dir==="..") { path_segs=path.split("/"); path_segs.pop(); path=path_segs.join('/'); }
+		if (dir==="..") { path=path.substring(0,path.lastIndexOf('/')); }
+		else { path=dir; }
+		getRepo();
+		}
+
+		function getRepoBlob(url,name,event)
+		{
+		// preventDefault needed because shift key will open a blank window,
+		// ctrl key opens a new tab.
+		event.preventDefault();
+		fetch(url)
+		.then(function(response) { return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (event.shiftKey)
+			{
+			const contentType='';
+			// can use fetch instead in order to convert blob to string
+/*
+			const b64toBlob=(base64,type='application/octet-stream') => 
+				fetch(`data:${type};base64,${base64}`).then(res => res.blob());
+			b64toBlob(data.content)
+			.then(bytes	=>
+				{
+				//console.log(bytes);
+				var link=window.document.createElement("a");
+				link.href=URL.createObjectURL(bytes,{type: contentType});
+				link.download=name;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				});
+*/
+			// Or:
+/*
+			var url="data:'application/octet-stream';base64,"+data.content;
+			fetch(url)
+				.then(res => res.blob())
+				.then(blob =>
+					{
+					var link=window.document.createElement("a");
+					link.href=URL.createObjectURL(blob,{type: contentType});
+					link.download=name;
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+					});
+*/
+			const byteCharacters=atob(data.content);
+			const byteArrays=[];
+			const sliceSize=512;
+			for (let offset=0;offset<byteCharacters.length;offset+=sliceSize)
+				{
+				const slice=byteCharacters.slice(offset,offset+sliceSize);
+				const bA=new Array(slice.length);
+				for (let i=0;i<slice.length;i++) { bA[i]=slice.charCodeAt(i); }
+				const byteArray=new Uint8Array(bA);
+				byteArrays.push(byteArray);
+				}
+			const blob=new Blob(byteArrays,{type: contentType});
+			const blobUrl=window.URL.createObjectURL(blob);
+			// window.location=... no advantage over non-Shift key method
+			//window.location=blobUrl;
+			var link=window.document.createElement("a");
+			//link.setAttribute("target='_blank'");
+			link.href=blobUrl;
+			//link.target='hiddenIframe';
+			link.download=name;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			// despite what someone said, don't revoke
+			//window.URL.revokeObjectURL(blobUrl);
+			}
+		else
+			{
+			newWin=window.open("","_blank");
+			if (newWin)
+				{
+				//console.log(data.content);
+				const byteCharacters=atob(data.content);
+				//console.log(byteCharacters);
+				html='<!DOCTYPE html><html><title>'+name+'</title><body bgcolor="'+colors[5]+'"><font color="'+colors[4]+'"><pre>';
+				// xmp is deprecated, but who cares, it works
+				if (!event.ctrlKey) { html+='<xmp>'; }
+				html+=byteCharacters;
+				if (!event.ctrlKey) { html+="</xmp>"; }
+				html+="</pre></font></html>";
+				newWin.document.open();
+				newWin.document.write(html);
+				newWin.document.close();
+				}
+			}
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getGistBlob(url,name,event)
+		{
+		event.preventDefault();
+		fetch(url)
+			.then(res => res.blob())
+			.then(blob =>
+				{
+				if (event.shiftKey)
+					{
+					const contentType='';
+					var link=window.document.createElement("a");
+					link.href=URL.createObjectURL(blob,{type: contentType});
+					link.download=name;
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+					}
+				else
+					{
+					// I have a feeling this is an indirect way of getting to
+					// what we want (i.e.:  A->B, B->A or even A->B, B->C,
+					// when one could just A->C).
+					var hrefurl=URL.createObjectURL(blob);
+					fetch(hrefurl)
+					.then(res => res.text())
+					.then(res =>
+						{
+						newWin=window.open("","_blank");
+						if (newWin)
+							{
+							html='<!DOCTYPE html><html><title>'+name+'</title><body bgcolor="'+colors[5]+'"><font color="'+colors[4]+'"><pre>';
+							if (!event.ctrlKey) { html+='<xmp>'; }
+							html+=res;
+							if (!event.ctrlKey) { html+="</xmp>"; }
+							html+="</pre></font></html>";
+							newWin.document.open();
+							newWin.document.write(html);
+							newWin.document.close();
+							}
+						});
+					}
+				});
+		}
+
+		function getOriginalRepoName(forkedname)
+		{
+		fetch("https://api.github.com/repos/"+forkedname)
+		.then(function(response) { return(response.json()); })
+		.then(
+		function(data)
+		{
+		myAlert(data.source.full_name,"Original Repo:");
+		});
+		}
+
+		function getRepo()
+		{
+		sel=0;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		//data1.innerHTML+="<br>";
+		var str=document.querySelector("#searchTextID").value;
+		str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+		var params={};
+		var ref=document.querySelector("#refID").value;
+		var query="";
+		if (ref!=="") { params.ref=ref; query="?"+Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&'); }
+		// can also use: https://api.github.com/repos/"+str+"/contents/"+path+"?"+new URLSearchParams(params) if browser supports it
+		fetch("https://api.github.com/repos/"+str+"/contents/"+path+query)
+		.then(function(response) { return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (data.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+data.message+" (See "+data.documentation_url+")</p>";
+			return;
+			}
+		data1.innerHTML+="<center><b>"+str+path+":</b></center>";
+		// Tried to test if unicode symbol was supported
+		//data1.innerHTML+='<div style="font-family: sans-serif, Segoe UI symbol, adobe notdef">&#xFFFD;test&#x25a1;&#x25AF;&#x1F618;&#x1F605;&#x1F617;&#x1F60E;&#x1F60E;&#x1F30A;&#x1F30A;&#x1F600;&#x1F5C0;</div><br>';
+		if (path!=="")
+			{
+			if (dirbut) { data1.innerHTML+="<button onclick=gotoRepoDirectory('..')>..</button><br>"; }
+			else { data1.innerHTML+="<a href='javascript:void(0)' onClick='gotoRepoDirectory(\"..\")' style='color: "+colors[0]+"'><b>..</b></a><br>"; }
+			}
+		for (i=0;i<data.length;i++)
+			{
+			if (data[i].download_url) { data1.innerHTML+="<a target='_blank' rel='noopener noreferrer' href='"+data[i].download_url+"' title='Click to open file in a new tab (go to githubusercontent.com).'>"+data[i].name+"</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href='javascript:void(0)' onClick='getRepoBlob(\""+data[i]._links.self+"\",\""+data[i].name+"\",event)' style='color: "+colors[0]+"' title='Click to get the file.  Press \"Ctrl\" while clicking to display file in new tab while interpreting HTML tags (no pressed keys will display without interpreting HTML tags).  Press \"Shift\" while clicking to save or open file (chooser dialog).'>"+data[i].size+"</a><br>"; }
+			//if (data[i].download_url) { data1.innerHTML+="<a target='_blank' rel='noopener noreferrer' href='"+data[i].download_url+"'>"+data[i].name+"</a>&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'>"+data[i].size+"<font><br>"; }
+			else if (data[i].type==="dir")
+				{
+				if (dirbut) { data1.innerHTML+="<button onclick=gotoRepoDirectory('"+path+"/"+data[i].name+"')>"+data[i].name+"</button><br>"; }
+				else { data1.innerHTML+="<a href='javascript:void(0)' onClick='gotoRepoDirectory(\""+path+"/"+data[i].name+"\")' style='color: "+colors[0]+"'><b>"+data[i].name+"</b></a><br>"; }
+				}
+			else if (data[i].type==="file")
+				{
+				data1.innerHTML+=data[i].name;
+				if (data[i].html_url)
+					{
+					// this is a link to another repo
+					var lrepo=data[i].html_url.substring(data[i].html_url.indexOf('.com/')+5,data[i].html_url.indexOf('/tree'));
+					data1.innerHTML+="&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'><font size='+1'>&#8680;</font>&nbsp;&nbsp;"+lrepo+"<font><br>";
+					//data1.innerHTML+="&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'><font size='+1'>&#8594;</font>&nbsp;&nbsp;"+lrepo+"<font><br>";
+					}
+				else { data1.innerHTML+="<br>"; }
+				}
+			else { data1.innerHTML+=data[i].name+"<br>"; }
+			}
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getBranches(url)
+		{
+		sel=1; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		var params={};
+		if (url===undefined)
+			{
+			var str=document.querySelector("#searchTextID").value;
+			str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+			params.per_page=100;
+			url="https://api.github.com/repos/"+str+"/branches";
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			// can also use: url+='?'+new URLSearchParams(params); if browser supports it
+			}
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (data.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+data.message+" (See "+data.documentation_url+")</p>";
+			return;
+			}
+		data1.innerHTML+="<br>";
+		for (i=0;i<data.length;i++)
+			{
+			data1.innerHTML+="<font color='"+colors[0]+"'>"+data[i].name+"<font>&nbsp;&nbsp;&nbsp;&nbsp;<a href=https://github.com/"+str+"/archive/refs/heads/"+data[i].name+".zip>ZIP</a><br>";
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp<font color='"+colors[1]+"'>"+data[i].commit.sha+"</font><br>";
+			}
+		if (links) { addPageLinks(links,"getBranches"); }
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getCommits(url)
+		{
+		sel=2; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		var params={};
+		if (url===undefined)
+			{
+			var str=document.querySelector("#searchTextID").value;
+			str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+			params.per_page=100;
+			url="https://api.github.com/repos/"+str+"/commits";
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			}
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (data.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+data.message+" (See "+data.documentation_url+")</p>";
+			return;
+			}
+		data1.innerHTML+="<br>";
+		for (i=0;i<data.length;i++)
+			{
+			data1.innerHTML+="<font color='"+colors[0]+"'>"+data[i].sha+"<font>";
+			var dstr;
+			if (dform) { dstr=data[i].commit.message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>'); }
+			else { dstr="<pre>"+data[i].commit.message+"</pre>"; }
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp<font color='"+colors[1]+"'><div style=\"font-size: 14px; padding: 10px; border: 2px solid "+colors[0]+"; margin: 10px; outline: "+colors[2]+" solid 5px;\">"+dstr+"</div></font>";
+			var d1=new Date(data[i].commit.author.date);
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp<font color='"+colors[1]+"'>"+data[i].commit.author.name+"&nbsp;&nbsp;"+data[i].commit.author.email+"&nbsp;&nbsp;&nbsp;"+d1+"</font><br><br>";
+			}
+		if (links) { addPageLinks(links,"getCommits"); }
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getReleases(url)
+		{
+		sel=3; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		var params={};
+		if (url===undefined)
+			{
+			var str=document.querySelector("#searchTextID").value;
+			str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+			params.per_page=100;
+			url="https://api.github.com/repos/"+str+"/releases";
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			}
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (data.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+data.message+" (See "+data.documentation_url+")</p>";
+			return;
+			}
+		data1.innerHTML+="<br>";
+		for (i=0;i<data.length;i++)
+			{
+			data1.innerHTML+="<font color='"+colors[0]+"'>"+data[i].tag_name+"</font><br>";
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp<font color='"+colors[1]+"'>"+data[i].name+"</font>";
+			var dstr;
+			if (dform) { dstr=data[i].body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>'); }
+			else { dstr="<pre>"+data[i].body+"</pre>"; }
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp<font color='"+colors[1]+"'><div style=\"font-size: 14px; padding: 10px; border: 2px solid "+colors[0]+"; margin: 10px; outline: "+colors[2]+" solid 5px;\">"+dstr+"</div></font>";
+			var d2=new Date(data[i].created_at);
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp<font color='"+colors[1]+"'>"+data[i].author.login+"&nbsp;&nbsp;&nbsp;"+d2+"</font><br>";
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp<a href='"+data[i].zipball_url+"'>ZIP</a>";
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp<a href='"+data[i].tarball_url+"'>TAR</a><br>";
+			for (j=0;j<data[i].assets.length;j++)
+				{
+				data1.innerHTML+="&nbsp;&nbsp;&nbsp<a href='"+data[i].assets[j].browser_download_url+"'>"+data[i].assets[j].name+"</a>&nbsp;&nbsp;&nbsp<font color='"+colors[0]+"'>"+data[i].assets[j].size+"</font>&nbsp;&nbsp;&nbsp;&nbsp;DCount: "+data[i].assets[j].download_count+"<br>";
+				}
+			data1.innerHTML+="<br>";
+			}
+		if (links) { addPageLinks(links,"getReleases"); }
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function openBodyTab(desc,number)
+		{
+		// probably could avoid this replace mess by converting to base64 then
+		// passing to this function, then converting back to string
+		var dstr=desc.replace(/<br>/g,'\r\n').replace(/&apos;/g,"'").replace(/mrmcsoftwarequotechar/g,'"');
+		newWin=window.open("","_blank");
+		if (newWin)
+			{
+			html='<!DOCTYPE html><html><title>'+number+'</title><body bgcolor="'+colors[5]+'"><font color="'+colors[4]+'"><xmp>';
+			html+=dstr;
+			html+="</xmp></font></html>";
+			newWin.document.open();
+			newWin.document.write(html);
+			newWin.document.close();
+			}
+		}
+
+		function getIssues(url)
+		{
+		sel=9; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		var params={};
+		if (url===undefined)
+			{
+			var str=document.querySelector("#searchTextID").value;
+			str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+			params.per_page=100;
+			if (!openonly) { params.state="all"; } // open, closed, or all
+			url="https://api.github.com/repos/"+str+"/issues";
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			}
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (data.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+data.message+" (See "+data.documentation_url+")</p>";
+			return;
+			}
+		data1.innerHTML+="<br>";
+		for (i=0;i<data.length;i++)
+			{
+			data1.innerHTML+="<div style='float:left'><font color='#ffffff'><span style='background-color:"+(data[i].state==="open"?"#700":"#070")+"'><b>&nbsp;"+data[i].state+"&nbsp;</b></span></font></div>&nbsp;&nbsp;&nbsp;";
+			//data1.innerHTML+="<font color='"+colors[0]+"'>"+data[i].state+"</font>&nbsp;&nbsp;";
+			if (data[i].body)
+				{
+				// for some reason &quot; won't work, need mrmcsoftwarequotechar
+				var dstr=data[i].body.replace(/"/g,'mrmcsoftwarequotechar').replace(/'/g,'&apos;').replace(/`/g,'&apos;').replace(/\r\n/g,'<br>');
+				data1.innerHTML+="<a href='javascript:void(0)' onClick='openBodyTab(\""+dstr+"\","+data[i].number+")'><font color='"+colors[3]+"'><b>"+data[i].title+"</b></font></a><br>";
+				}
+			else { data1.innerHTML+="<font color='"+colors[3]+"'><b>"+data[i].title+"</b></font><br>"; }
+			var d3=new Date(data[i].created_at);
+			data1.innerHTML+="<a target='_blank' rel='noopener noreferrer' href='"+data[i].html_url+"' style='color:"+colors[4]+"'>#"+data[i].number+"</a>  Opened "+d3+" by <font color='"+colors[0]+"'>"+data[i].user.login+"</font><br>";
+//data1.innerHTML+="<div style='float:left'>Testing:</div>&nbsp;&nbsp;&nbsp;&nbsp;<div style='float:left'><span style='background-color:#070'>&nbsp;some text&nbsp;</span></div>&nbsp;&nbsp;<div style='float:left'><span style='background-color:#700'>&nbsp;more text&nbsp;</span></div>";
+			if (data[i].labels.length>0)
+				{
+				data1.innerHTML+="<div style='float:left'>&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'>Labels: </font></div>&nbsp;&nbsp;";
+				for (j=0;j<data[i].labels.length;j++)
+					{
+					data1.innerHTML+="<div style='float:left'>&nbsp;&nbsp;<span style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b><font color='#ffffff'>"+data[i].labels[j].name+"</font></b>&nbsp;</span></div>&nbsp;&nbsp;";
+					//data1.innerHTML+="<div style='float:left'>&nbsp;&nbsp;<span style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b>"+data[i].labels[j].name+"</b>&nbsp;</span></div>&nbsp;&nbsp;";
+					//data1.innerHTML+="<div style='float:left'>&nbsp;&nbsp;<span style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b><font color='#"+((data[i].labels[j].color^0xffffff)&0xffffff).toString(16)+"'>"+data[i].labels[j].name+"</font></b>&nbsp;</span></div>&nbsp;&nbsp;";
+					//data1.innerHTML+="<font color='"+data[i].labels[j].color+"'>"+data[i].labels[j].name+"</font>&nbsp;&nbsp;&nbsp;";
+					}
+				data1.innerHTML+="<br>";
+				}
+			data1.innerHTML+="<br>";
+			}
+		if (links) { addPageLinks(links,"getIssues"); }
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getPulls(url)
+		{
+		sel=10; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		var params={};
+		if (url===undefined)
+			{
+			var str=document.querySelector("#searchTextID").value;
+			str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+			params.per_page=100;
+			if (!openonly) { params.state="all"; } // open, closed, or all
+			url="https://api.github.com/repos/"+str+"/pulls";
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			}
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (data.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+data.message+" (See "+data.documentation_url+")</p>";
+			return;
+			}
+		data1.innerHTML+="<br>";
+		for (i=0;i<data.length;i++)
+			{
+			data1.innerHTML+="<div style='float:left'><font color='#ffffff'><span style='background-color:"+(data[i].state==="open"?"#700":"#070")+"'><b>&nbsp;"+data[i].state+"&nbsp;</b></span></font></div>&nbsp;&nbsp;&nbsp;";
+			if (data[i].body)
+				{
+				// for some reason &quot; won't work, need mrmcsoftwarequotechar
+				var dstr=data[i].body.replace(/"/g,'mrmcsoftwarequotechar').replace(/'/g,'&apos;').replace(/`/g,'&apos;').replace(/\r\n/g,'<br>');
+				data1.innerHTML+="<a href='javascript:void(0)' onClick='openBodyTab(\""+dstr+"\","+data[i].number+")'><font color='"+colors[3]+"'><b>"+data[i].title+"</b></font></a><br>";
+				}
+			else { data1.innerHTML+="<font color='"+colors[3]+"'><b>"+data[i].title+"</b></font><br>"; }
+			var d3=new Date(data[i].created_at);
+			data1.innerHTML+="<a target='_blank' rel='noopener noreferrer' href='"+data[i].html_url+"' style='color:"+colors[4]+"'>#"+data[i].number+"</a>  Opened "+d3+" by <font color='"+colors[0]+"'>"+data[i].user.login+"</font><br>";
+			if (data[i].labels.length>0)
+				{
+				data1.innerHTML+="<div style='float:left'>&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'>Labels: </font></div>&nbsp;&nbsp;";
+				for (j=0;j<data[i].labels.length;j++)
+					{
+					data1.innerHTML+="<div style='float:left'>&nbsp;&nbsp;<span style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b><font color='#ffffff'>"+data[i].labels[j].name+"</font></b>&nbsp;</span></div>&nbsp;&nbsp;";
+					}
+				data1.innerHTML+="<br>";
+				}
+			data1.innerHTML+="<br>";
+			}
+		if (links) { addPageLinks(links,"getPulls"); }
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getEngagementLists(url,reponame,metric)
+		{
+		// just getting at most 100, not bothering with pagination
+		var params={};
+		params.per_page=100;
+		params.sort="newest"; // only applies to forkers, sadly
+		var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+		fetch(url+'?'+query)
+		.then(function(response) { return(response.json()); })
+		.then(
+		function(data)
+		{
+		newWin=window.open("","_blank");
+		if (newWin)
+			{
+			html='<!DOCTYPE html><html><title>'+reponame+': '+metric+'</title><body bgcolor="'+colors[5]+'"><font color="'+colors[4]+'">';
+			if (data.length>=100) { html+='<font color="'+colors[0]+'"><b>This is only a partial list of 100</b></font><br><br>'; }
+			if ((metric==="Subscriptions")||(metric==="Starred")) { for (i=0;i<data.length;i++) { html+="<b>"+data[i].full_name+"</b><br>"; } }
+			else if (metric==="Organizations")
+				{
+				for (i=0;i<data.length;i++)
+					{
+					// also: public_members
+					html+="<img src="+data[i].avatar_url+" height=32>&nbsp;&nbsp;<b><a href='javascript:void(0)' onClick='window.opener.getEngagementLists(\"https://api.github.com/orgs/"+data[i].login+"/members\",\""+data[i].login+"\",\"Organization Members\")' style='color: "+colors[4]+"' title='Click to get a list of organization members.'>"+data[i].login+"</a></b><br>";
+					}
+				}
+			else if (metric!=="Forkers") { for (i=0;i<data.length;i++) { html+="<img src="+data[i].avatar_url+" height=32>&nbsp;&nbsp;<b>"+data[i].login+"</b><br>"; } }
+			else { for (i=0;i<data.length;i++) { html+="<img src="+data[i].owner.avatar_url+" height=32>&nbsp;&nbsp;<b>"+data[i].owner.login+"</b><br>"; } }
+			html+="</font></html>";
+			newWin.document.open();
+			newWin.document.write(html);
+			newWin.document.close();
+			}
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getInfoMetrics()
+		{
+		sel=4;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		var str=document.querySelector("#searchTextID").value;
+		str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+		fetch("https://api.github.com/repos/"+str)
+		.then(function(response) { return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (data.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+data.message+" (See "+data.documentation_url+")</p>";
+			return;
+			}
+		data1.innerHTML+="<br>";
+		data1.innerHTML+="<font color='"+colors[3]+"'>"+data.name+"</font>";
+		if (data.fork===true)
+			{
+			data1.innerHTML+="&nbsp;&nbsp;&nbsp;&nbsp;(Fork)";
+			data1.innerHTML+="<br><font color='"+colors[0]+"'>Original Repo: </font>"+data.source.full_name+"<br>";
+			}
+		else { data1.innerHTML+="<br>"; }
+		if (data.description)
+			{
+			var dstr=data.description.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+			data1.innerHTML+="<font color='"+colors[0]+"'>Description: </font>"+dstr+"<br>";
+			}
+		if (data.topics.length>0)
+			{
+			data1.innerHTML+="<font color='"+colors[0]+"'>Topics: </font>";
+			var tstr=data.topics[0];
+			for (i=1;i<data.topics.length;i++) { tstr+=", "+data.topics[i]; }
+			tstr+="<br>";
+			data1.innerHTML+=tstr;
+			}
+		data1.innerHTML+="<font color='"+colors[0]+"'>Stars: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data.stargazers_url+"\",\""+data.name+"\",\"Stargazers\")' style='color: "+colors[4]+"' title='Click to get a list of stargazers.'>"+data.stargazers_count+"</a><br>";
+		data1.innerHTML+="<font color='"+colors[0]+"'>Forks: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data.forks_url+"\",\""+data.name+"\",\"Forkers\")' style='color: "+colors[4]+"' title='Click to get a list of forkers.'>"+data.forks_count+"</a><br>";
+		data1.innerHTML+="<font color='"+colors[0]+"'>Subscribers/Watchers: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data.subscribers_url+"\",\""+data.name+"\",\"Subscribers/Watchers\")' style='color: "+colors[4]+"' title='Click to get a list of subscribers.'>"+data.subscribers_count+"</a><br>";
+		data1.innerHTML+="<font color='"+colors[0]+"'>Watchers?: </font>"+data.watchers_count+"<br>";
+		data1.innerHTML+="<font color='"+colors[0]+"'>Open Issues: </font>"+data.open_issues_count+"<br>"; // .open_issues as well
+		var d7=new Date(data.created_at);
+		var d8=new Date(data.updated_at);
+		var d9=new Date(data.pushed_at);
+		data1.innerHTML+="<font color='"+colors[0]+"'>Creation Date: </font>"+d7+"<br>";
+		data1.innerHTML+="<font color='"+colors[0]+"'>Update Date: </font>"+d8+"<br>";
+		data1.innerHTML+="<font color='"+colors[0]+"'>Push Date: </font>"+d9+"<br>";
+		if (data.language) { data1.innerHTML+="<font color='"+colors[0]+"'>Language: </font>"+data.language+"<br>"; }
+		if (data.homepage) { data1.innerHTML+="<font color='"+colors[0]+"'>Homepage: </font>"+data.homepage+"<br>"; }
+		if (data.license) { data1.innerHTML+="<font color='"+colors[0]+"'>License: </font>"+data.license.name+" ("+data.license.spdx_id+")<br>"; }
+		data1.innerHTML+="<br><button onClick='getEngagementLists(\""+data.contributors_url+"\",\""+str+"\",\"Contributors\")' title='Click to get a list of contributors.'>Get Contributors</button><br>";
+		// Collaborators list requires authentication
+		//data1.innerHTML+="<button onClick='getEngagementLists(\"https://api.github.com/repos/"+str+"/collaborators\",\""+str+"\",\"Collaborators\")' title='Click to get a list of collaborators.'>Get Collaborators</button><br>";
+		/* Have to have push access to use (certainly have to be logged in)
+		// replace "clones" with "views" to get view counts
+		fetch("https://api.github.com/repos/"+str+"/traffic/clones")
+		.then(function(response) { return(response.json()); })
+		.then(
+			function(cdata)
+			{
+			if (cdata.count>0)
+				{
+				data1.innerHTML+="<font color='"+colors[0]+"'>Clones (Last 14 Days):<br></font>";
+				data1.innerHTML+=cdata.count+" Total Clones ("+cdata.uniques+" Unique)<br>";
+				for (i=0;i<cdata.clones.length;i++)
+					{
+					var d10=new Date(cdata.clones[i].timestamp);
+					data1.innerHTML+=d10+": "+cdata.clones[i].count+" Clones ("+cdata.clones[i].uniques+" Unique)<br>";
+					}
+				}
+			}).catch(function(error)
+				{
+				document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+				});
+		*/
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getUserInfo(url)
+		{
+		sel=5; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		data1.innerHTML+="<br>";
+		var str=document.querySelector("#searchTextID").value;
+		str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+		var ind=str.lastIndexOf('/');
+		if (ind>=0) { str=str.substring(0,ind); }
+		var params={};
+		fetch("https://api.github.com/users/"+str)
+		.then(function(response) { return(response.json()); })
+		.then(
+		function(udata)
+		{
+		if (udata.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+udata.message+" (See "+udata.documentation_url+")</p>";
+			return;
+			}
+		var name="",email="",company="",following="",bio="<br>",locat="";
+		var twitter="";
+		if (udata.name!==null) { name=udata.name; }
+		else { name="("+str+")"; }
+		if (udata.email!==null) { email=udata.email+"<br>"; }
+		if (udata.company!==null) { company=udata.company+"<br>"; }
+		if (udata.twitter_username!==null) { twitter=udata.twitter_username+"&nbsp; (Twitter)<br>"; }
+		if (udata.location!==null) { locat=udata.location+"<br>"; }
+		if (udata.following>0) { following="<a href='javascript:void(0)' onClick='getEngagementLists(\"https://api.github.com/users/"+str+"/following\",\""+str+"\",\"Followings\")' style='color: "+colors[4]+"' title='Click to get a list of followings.'>"+udata.following+" followings</a><br>"; }
+		if (udata.bio)
+			{
+			var dstr=udata.bio.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+			bio="<div style=\"padding: 7px; border: 2px solid "+colors[0]+"; margin: 7px; outline: "+colors[2]+" solid 5px;\">"+dstr+"</div>";
+			}
+		var d5=new Date(udata.created_at);
+		var d6=new Date(udata.updated_at);
+		data1.innerHTML+="<table border=2 valign=center cellpadding=8><tr><td align=center><img src="+udata.avatar_url+"></td><td align=left width=100%><b>"+name+"</b><br>"+email+company+locat+twitter+udata.blog+bio+d5+" (Joined)<br>"+d6+" (Updated?)<br>"+udata.public_repos+" public repos<br>"+udata.public_gists+" public gists<br><a href='javascript:void(0)' onClick='getEngagementLists(\""+udata.followers_url+"\",\""+str+"\",\"Followers\")' style='color: "+colors[4]+"' title='Click to get a list of followers.'>"+udata.followers+" followers</a><br>"+following+"<br><button onClick='getEngagementLists(\""+udata.organizations_url+"\",\""+name+"\",\"Organizations\")' title='Click to get a list of organizations this user belongs to.'>Get Organizations</button>&nbsp;&nbsp;&nbsp;<button onClick='getEngagementLists(\""+udata.subscriptions_url+"\",\""+name+"\",\"Subscriptions\")' title='Click to get a list of repos this user subscribes to.'>Get Subscriptions</button>&nbsp;&nbsp;&nbsp;<button onClick='getEngagementLists(\"https://api.github.com/users/"+str+"/starred\",\""+name+"\",\"Starred\")' title='Click to get a list of repos this user starred.'>Get Starred Repos</button></td></tr></table>";
+		//data1.innerHTML+="<table border=2 valign=center cellpadding=8><tr><td align=center><img src="+udata.avatar_url+"></td><td align=left width=860><b>"+udata.name+"</b><br>"+email+company+locat+udata.blog+bio+d5+" (Joined)<br>"+d6+" (Updated?)<br>"+udata.public_repos+" public repos<br>"+udata.public_gists+" public gists<br>"+udata.followers+" followers<br>"+following+"</td></tr></table>";
+		if (url===undefined)
+			{
+			params.per_page=20; // reduced because fetch doesn't seem as good
+			url="https://api.github.com/users/"+str+"/repos";
+			// if it's an organization, you could do the following:
+			// url="https://api.github.com/orgs/"+str+"/repos";
+			// but there doesn't seem to be a good reason to do it, because
+			// either way reports all the repos, orgs method just changes order
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			}
+		// optional params:
+		// type: all, owner, member  default: owner
+		// sort: created, updated, pushed, full_name  default: full_name
+		// direction: asc, desc  default: asc when full_name, desc otherwise
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+			function(data)
+			{
+			data1.innerHTML+="<br>";
+			var altc="<font color='"+colors[0]+"'>";
+			var altc4="<font color='"+colors[3]+"'>";
+			for (i=0;i<data.length;i++)
+				{
+				data1.innerHTML+=altc4+data[i].name+"</font>";
+				if (data[i].fork===true)
+					{
+					data1.innerHTML+="&nbsp;&nbsp;&nbsp;&nbsp;<a href='javascript:void(0)' onClick='getOriginalRepoName(\""+data[i].full_name+"\")' style='color: "+colors[4]+"'>(Fork)</a>";
+					}
+				if (data[i].description)
+					{
+					var dstr;
+					if (dform) { dstr=data[i].description.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>'); }
+					else { dstr="<pre>"+data[i].description+"</pre>"; }
+					data1.innerHTML+="&nbsp;&nbsp;&nbsp<font color='"+colors[1]+"'><div style=\"font-size: 14px; padding: 10px; border: 2px solid "+colors[0]+"; margin: 10px; outline: "+colors[2]+" solid 5px;\">"+dstr+"</div></font>";
+					}
+				else { data1.innerHTML+="<br>"; }
+				var lang="";
+				if (data[i].language) { lang=data[i].language; }
+				data1.innerHTML+=altc+"Language: </font>"+lang;
+				data1.innerHTML+="&nbsp;&nbsp;<button onclick='getRepoLanguages(\""+data[i].full_name+"\")'>See All</button>";
+				if (data[i].stargazers_count>0) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;"+altc+"Stars: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data[i].stargazers_url+"\",\""+data[i].name+"\",\"Stargazers\")' style='color: "+colors[4]+"' title='Click to get a list of stargazers.'>"+data[i].stargazers_count+"</a>"; }
+				//if (data[i].forks_count>0) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;"+altc+"Forks: </font>"+data[i].forks_count; }
+				if (data[i].forks_count>0) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;"+altc+"Forks: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data[i].forks_url+"\",\""+data[i].name+"\",\"Forkers\")' style='color: "+colors[4]+"' title='Click to get a list of forkers.'>"+data[i].forks_count+"</a>"; }
+				data1.innerHTML+="<br>";
+				if (data[i].topics.length>0)
+					{
+					data1.innerHTML+="<font color='"+colors[0]+"'>Topics: </font>";
+					var tstr=data[i].topics[0];
+					for (j=1;j<data[i].topics.length;j++) { tstr+=", "+data[i].topics[j]; }
+					tstr+="<br>";
+					data1.innerHTML+=tstr;
+					}
+				data1.innerHTML+=altc+"Watchers: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data[i].subscribers_url+"\",\""+data[i].name+"\",\"Subscribers\")' style='color: "+colors[4]+"' title='Click to get a list of subscribers/watchers.'>"+data[i].watchers_count+"</a><br>";
+				if (data[i].homepage) { data1.innerHTML+=altc+"Homepage: </font><a target='_blank' rel='noopener noreferrer' href='"+data[i].homepage+"'>"+data[i].homepage+"</a><br>"; }
+				if (data[i].has_pages)
+					{
+					var ldemo="https://"+str+".github.io/"+data[i].name;
+					data1.innerHTML+=altc+"Live Demo (guess): </font><a target='_blank' rel='noopener noreferrer' href='"+ldemo+"'>"+ldemo+"</a><br>";
+					}
+				if (data[i].license) { data1.innerHTML+=altc+"License: </font>"+data[i].license.name+" ("+data[i].license.spdx_id+")<br>"; }
+				if (data[i].open_issues_count>0) { data1.innerHTML+=altc+"Open Issues: </font>"+data[i].open_issues_count+"<br>"; }
+				var d3=new Date(data[i].created_at);
+				//var d4=new Date(data[i].updated_at);
+				// Github.com uses push date to mean update
+				var d4=new Date(data[i].pushed_at);
+				data1.innerHTML+=altc+"Created: </font>"+d3+"<br>";
+				data1.innerHTML+=altc+"Updated: </font>"+d4+"<br>";
+				data1.innerHTML+="<br>";
+				}
+			if (links) { addPageLinks(links,"getUserInfo"); }
+			}).catch(function(error)
+				{
+				document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+				});
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getRepoLanguages(repo)
+		{
+		fetch("https://api.github.com/repos/"+repo+"/languages")
+		.then(function(response) { return(response.json()); })
+		.then(
+		function(data)
+		{
+		var total=0;
+		var keys=Object.keys(data);
+		for (i=0;i<keys.length;i++) { total+=data[keys[i]]; }
+		var str="";
+		for (i=0;i<keys.length;i++) { str+=keys[i]+": "+(data[keys[i]]/total*100.0).toFixed(2)+"%<br>"; }
+		var name=repo.slice(repo.indexOf('/')+1);
+		myAlert(str,"Language Breakdown: "+name);
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function getGists(url)
+		{
+		sel=8; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		data1.innerHTML+="<br>";
+		var params={};
+		if (url===undefined)
+			{
+			var str=document.querySelector("#searchTextID").value;
+			str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+			var ind=str.lastIndexOf('/');
+			if (ind>=0) { str=str.substring(0,ind); }
+			params.per_page=100;
+			url="https://api.github.com/users/"+str+"/gists";
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			}
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+		function(data)
+		{
+		if (data.message)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>Error: "+data.message+" (See "+data.documentation_url+")</p>";
+			return;
+			}
+		for (i=0;i<data.length;i++)
+			{
+			data1.innerHTML+="<font color='"+colors[3]+"'><b>"+data[i].id+"</b></font><br>";
+			if (data[i].description)
+				{
+				var dstr=data[i].description.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+				data1.innerHTML+="<font color='"+colors[0]+"'>Description: </font>"+dstr+"<br>";
+				}
+			var d7=new Date(data[i].created_at);
+			var d8=new Date(data[i].updated_at);
+			data1.innerHTML+="<font color='"+colors[0]+"'>Created: </font>"+d7+"<br>";
+			data1.innerHTML+="<font color='"+colors[0]+"'>Updated: </font>"+d8+"<br>";
+			var keys=Object.keys(data[i].files);
+			for (j=0;j<keys.length;j++)
+				{
+				if (data[i].files[keys[j]].raw_url) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;<a target='_blank' rel='noopener noreferrer' href='"+data[i].files[keys[j]].raw_url+"' title='Click to open file in a new tab (go to githubusercontent.com).'>"+data[i].files[keys[j]].filename+"</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href='javascript:void(0)' onClick='getGistBlob(\""+data[i].files[keys[j]].raw_url+"\",\""+data[i].files[keys[j]].filename+"\",event)' style='color: "+colors[0]+"' title='Click to get the file.  Press \"Ctrl\" while clicking to display file in new tab while interpreting HTML tags (no pressed keys will display without interpreting HTML tags).  Press \"Shift\" while clicking to save or open file (chooser dialog).'>"+data[i].files[keys[j]].size+"</a><br>"; }
+				//if (data[i].files[keys[j]].raw_url) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;<a target='_blank' rel='noopener noreferrer' href='"+data[i].files[keys[j]].raw_url+"'>"+data[i].files[keys[j]].filename+"</a>&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'>"+data[i].files[keys[j]].size+"<font><br>"; }
+				else { data1.innerHTML+="&nbsp;&nbsp;&nbsp;"+data[i].files[keys[j]].filename+"<br>"; }
+				}
+			data1.innerHTML+="<br>";
+			}
+		if (links) { addPageLinks(links,"getGists"); }
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function submitMarkdown()
+		{
+		var params={};
+		var str=document.querySelector("#searchTextID").value;
+		str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+		//var url="https://api.github.com/repos/"+str+"/contents/README.md";
+		var url="https://api.github.com/repos/"+str+"/readme";
+		fetch(url)
+		.then(function(response) { return(response.json()); })
+		.then(
+			function(rdata)
+			{
+			params={method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({text: atob(rdata.content)})};
+			fetch("https://api.github.com/markdown",params)
+			.then(function(response) { return(response.text()); })
+			.then(
+				function(data)
+				{
+				newWin=window.open("","_blank");
+				if (newWin)
+					{
+					html='<!DOCTYPE html><html><head><style>blockquote { border-left: .25em solid #5236a0; margin: 0 0 0; padding: 0 0 0 1.25em; position: relative; } code { background-color: '+colors[6]+'; }</style></head><title>'+name+'</title><body bgcolor="'+colors[5]+'"><font color="'+colors[4]+'">';
+					html+=data;
+					html+="</font></html>";
+					newWin.document.open();
+					newWin.document.write(html);
+					newWin.document.close();
+					}
+				}).catch(function(error)
+					{
+					document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+					});
+			}).catch(function(error)
+				{
+				document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+				});
+		}
+
+		function searchRepos(url)
+		{
+		sel=6; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		data1.innerHTML+="<br>";
+		var params={};
+		if (url===undefined)
+			{
+			var str=document.querySelector("#searchTextID").value;
+			params.per_page=100;
+			params.q=str;
+			params.sort="stars";
+			params.order="desc";
+			url="https://api.github.com/search/repositories";
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			}
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+		function(data)
+		{
+		data1.innerHTML+=data.total_count+" Matches<br>";
+		for (i=0;i<data.items.length;i++)
+			{
+			var fork="";
+			if (data.items[i].fork===true) { fork="&nbsp;&nbsp;&nbsp;&nbsp;(Fork)"; }
+			data1.innerHTML+="<br><font color='"+colors[3]+"'><b>"+data.items[i].full_name+"</b></font>"+fork+"<br>";
+			if (data.items[i].description)
+				{
+				var desc=data.items[i].description;
+				if (desc.length>256) { desc=desc.substring(0,256)+"..."; }
+				var dstr=desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+				data1.innerHTML+="<font color='"+colors[0]+"'>Description: </font>"+dstr+"<br>";
+				}
+			if (data.items[i].language) { data1.innerHTML+="<font color='"+colors[0]+"'>Language: </font>"+data.items[i].language; }
+			data1.innerHTML+="<font color='"+colors[0]+"'>&nbsp;&nbsp;&nbsp;Stars: </font>"+data.items[i].stargazers_count;
+			data1.innerHTML+="<font color='"+colors[0]+"'>&nbsp;&nbsp;&nbsp;Forks: </font>"+data.items[i].forks_count;
+			data1.innerHTML+="<font color='"+colors[0]+"'>&nbsp;&nbsp;&nbsp;Watchers?: </font>"+data.items[i].watchers_count+"<br>";
+			var d7=new Date(data.items[i].created_at);
+			var d8=new Date(data.items[i].updated_at);
+			var d9=new Date(data.items[i].pushed_at);
+			data1.innerHTML+="<font color='"+colors[0]+"'>Creation Date: </font>"+d7+"<br>";
+			data1.innerHTML+="<font color='"+colors[0]+"'>Update Date: </font>"+d8+"<br>";
+			data1.innerHTML+="<font color='"+colors[0]+"'>Push Date: </font>"+d9+"<br>";
+			}
+		if (links) { addPageLinks(links,"searchRepos"); }
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function searchUsers(url)
+		{
+		sel=7; urlstore[sel]=url;
+		var data1=document.getElementById("data-1");
+		data0.innerHTML=null;
+		data1.innerHTML=null;
+		data1.innerHTML+="<br>";
+		var params={};
+		if (url===undefined)
+			{
+			var str=document.querySelector("#searchTextID").value;
+			params.per_page=100;
+			params.q=str;
+			url="https://api.github.com/search/users";
+			var query=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+			url+='?'+query;
+			}
+		fetch(url)
+		.then(function(response) { links=response.headers.get("Link"); return(response.json()); })
+		.then(
+		function(data)
+		{
+		data1.innerHTML+=data.total_count+" Matches<br><br>";
+		for (i=0;i<data.items.length;i++)
+			{
+			data1.innerHTML+="<font color='"+colors[3]+"'><b>"+data.items[i].login+"</b></font><br>";
+			}
+		if (links) { addPageLinks(links,"searchUsers"); }
+		}).catch(function(error)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+			});
+		}
+
+		function gotoRepo(event)
+		{
+		// get repo contents with this page or go to github.com's page or
+		// process README.md for markdown and open on new tab depending on
+		// whether Shift key or Ctrl key was pressed while clicking button.
+		if (event.ctrlKey) { submitMarkdown(); return; }
+		if (!event.shiftKey) { path=""; getRepo(); return; }
+		var str=document.querySelector("#searchTextID").value;
+		str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
+		window.open('https://github.com/'+str,'_blank');
+		}
+	</script>
+<div class="header" id="headerID">
+<div style="float:left">
+&nbsp;
+<input id="searchTextID" type="text" value="" maxlength="100" size=22 onkeypress='getRepoKeyb(event)' autofocus title="RepoOwner/RepoName or UserName or SearchString">
+<input id="refID" type="text" value="" maxlength="100" size=8 title="Branch, Commit, or Tag name">
+<button id="contentsID" onclick="gotoRepo(event)" title="Get Contents (Press 'Shift' while clicking to go to the github.com page for the repo.  Press 'Ctrl' while clicking to process README.md for markdown and open on new tab)">Contents</button>
+<button id="branchesID" onclick="getBranches()" title="Get Branches">Branches</button>
+<button id="commitsID" onclick="getCommits()" title="Get Commits">Commits</button>
+<button id="releasesID" onclick="getReleases()" title="Get Releases">Releases</button>
+<button id="issuesID" onclick="getIssues()" title="Get Issues">Issues</button>
+<button id="pullsID" onclick="getPulls()" title="Get Pull Requests">Pulls</button>
+<button id="infoID" onclick="getInfoMetrics()" title="Get Repo Info/Metrics">Info</button>
+<button id="userID" onclick="getUserInfo()" title="Get User Info/Metrics">User</button>
+<button id="gistID" onclick="getGists()" title="Get User's Gists">Gists</button>
+<!--button id="searchReposID" onclick="searchRepos()" title="Search Repositories">&#x2315;</button-->
+<button id="searchReposID" onclick="searchRepos()" title="Search Repositories"><div style="-webkit-transform: rotate(-45deg);
+               -moz-transform: rotate(-45deg);
+                 -o-transform: rotate(-45deg);
+                    transform: rotate(-45deg);">
+    &#9906;
+</div></button>
+<button id="searchUsersID" onclick="searchUsers()" title="Search Users" style="margin-left:-6px"><div style="-webkit-transform: rotate(-45deg);
+               -moz-transform: rotate(-45deg);
+                 -o-transform: rotate(-45deg);
+                    transform: rotate(-45deg);">
+    &#9906;
+</div></button>
+&nbsp;&nbsp;
+<button onclick="darkLightMode()" title="Darkmode/Lightmode Toggle"><div id="darkLightModeID">&#9788</div></button>
+</div>
+<div>
+&nbsp;&nbsp;
+<input type="checkbox" id="keepOnTopID" checked onclick="setKeepOnTop()" title="Toggle keeping control bar on top of page." style="margin: 0; padding: 0; height:10px"/> On Top<br style="margin: 0px; padding: 0px">
+&nbsp;&nbsp;
+<input type="checkbox" id="openOnlyID" onclick="setOpenOnly()" title="Toggle whether to only get open issues/pulls." style="margin: 0; padding: 0; height:10px"/> Open<br style="margin: 0px; padding: 0px">
+</div>
+</div>
+<div id="data-0"></div>
+<div id="data-1"></div><br>
+<div id="ModalID" class="modal">
+<div class="modal-content">
+<div class="modal-header">
+<span id="modalHeaderID"></span>
+<span class="close">&times;</span>
+</div>
+<div id="modalBodyID" class="modal-body"></div>
+</div>
+</div>
+	<script>
+		window.onscroll=function() { scrollIt() };
+
+		var header=document.getElementById("headerID");
+		var sticky=header.offsetTop;
+
+		function scrollIt()
+		{
+		if (!keepontop) { return; }
+		if (window.pageYOffset>sticky) { header.classList.add("sticky"); }
+		else { header.classList.remove("sticky"); }
+		}
+	</script>
+<!--iframe style="display:none;" name="hiddenIframe" id="hiddenIframe"></iframe-->
+</body>
+</html>
