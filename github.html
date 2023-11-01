@@ -81,6 +81,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			font-weight: bold;
 			}
 		.modal-body { padding: 2px 16px; color: white; font-size: 12px; }
+		.label { text-shadow: 0px 0px 1.5px #000000, -1px -1px 1.5px #000000, 1px 1px 1.5px #000000; }
 	</style>
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 </head>
@@ -272,11 +273,12 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			const byteCharacters=atob(data.content);
 			const byteArrays=[];
 			const sliceSize=512;
-			for (let offset=0;offset<byteCharacters.length;offset+=sliceSize)
+			var offset,i;
+			for (offset=0;offset<byteCharacters.length;offset+=sliceSize)
 				{
 				const slice=byteCharacters.slice(offset,offset+sliceSize);
 				const bA=new Array(slice.length);
-				for (let i=0;i<slice.length;i++) { bA[i]=slice.charCodeAt(i); }
+				for (i=0;i<slice.length;i++) { bA[i]=slice.charCodeAt(i); }
 				const byteArray=new Uint8Array(bA);
 				byteArrays.push(byteArray);
 				}
@@ -301,12 +303,12 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			if (newWin)
 				{
 				//console.log(data.content);
-				const byteCharacters=atob(data.content);
-				//console.log(byteCharacters);
+				const byteCharacters2=atob(data.content);
+				//console.log(byteCharacters2);
 				html='<!DOCTYPE html><html><title>'+name+'</title><body bgcolor="'+colors[5]+'"><font color="'+colors[4]+'"><pre>';
 				// xmp is deprecated, but who cares, it works
 				if (!event.ctrlKey) { html+='<xmp>'; }
-				html+=byteCharacters;
+				html+=byteCharacters2;
 				if (!event.ctrlKey) { html+="</xmp>"; }
 				html+="</pre></font></html>";
 				newWin.document.open();
@@ -587,7 +589,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 				$("#data-1").append("<div style='float:left'>&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'>Labels: </font></div>&nbsp;&nbsp;");
 				for (j=0;j<data[i].labels.length;j++)
 					{
-					$("#data-1").append("<div style='float:left'>&nbsp;&nbsp;<span style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b><font color='#ffffff'>"+data[i].labels[j].name+"</font></b>&nbsp;</span></div>&nbsp;&nbsp;");
+					$("#data-1").append("<div style='float:left'>&nbsp;&nbsp;<span class='label' style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b><font color='#ffffff'>"+data[i].labels[j].name+"</font></b>&nbsp;</span></div>&nbsp;&nbsp;");
 					//$("#data-1").append("<div style='float:left'>&nbsp;&nbsp;<span style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b>"+data[i].labels[j].name+"</b>&nbsp;</span></div>&nbsp;&nbsp;");
 					//$("#data-1").append("<div style='float:left'>&nbsp;&nbsp;<span style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b><font color='#"+((data[i].labels[j].color^0xffffff)&0xffffff).toString(16)+"'>"+data[i].labels[j].name+"</font></b>&nbsp;</span></div>&nbsp;&nbsp;");
 					//$("#data-1").append("<font color='"+data[i].labels[j].color+"'>"+data[i].labels[j].name+"</font>&nbsp;&nbsp;&nbsp;");
@@ -639,7 +641,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 				$("#data-1").append("<div style='float:left'>&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'>Labels: </font></div>&nbsp;&nbsp;");
 				for (j=0;j<data[i].labels.length;j++)
 					{
-					$("#data-1").append("<div style='float:left'>&nbsp;&nbsp;<span style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b><font color='#ffffff'>"+data[i].labels[j].name+"</font></b>&nbsp;</span></div>&nbsp;&nbsp;");
+					$("#data-1").append("<div style='float:left'>&nbsp;&nbsp;<span class='label' style='background-color:#"+data[i].labels[j].color+"'>&nbsp;<b><font color='#ffffff'>"+data[i].labels[j].name+"</font></b>&nbsp;</span></div>&nbsp;&nbsp;");
 					}
 				$("#data-1").append("<br>");
 				}
