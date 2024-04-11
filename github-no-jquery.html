@@ -836,10 +836,30 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		data1.innerHTML=null;
 		data1.innerHTML+="<br>";
 		var str=document.querySelector("#searchTextID").value;
+		var params={};
+		if (str.charAt(0)==='@')
+			{
+			// call by user id suggested by Coffee-Puff on reddit using
+			// method pointed out by statusfailed on stackoverflow (referring
+			// to docs.github.com)
+			var id=parseInt(str.substring(1))-1;
+			fetch("https://api.github.com/users?since="+id+"&per_page=1")
+			.then(function(response) { return(response.json()); })
+			.then(
+			function(udata)
+			{
+			if (udata.length===0) { data1.innerHTML+="User Not Found"; return; }
+			document.getElementById("searchTextID").value=udata[0].login;
+			getUserInfo(url);
+			}).catch(function(error)
+				{
+				document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+error+"</p>";
+				return;
+				});
+			}
 		str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
 		var ind=str.lastIndexOf('/');
 		if (ind>=0) { str=str.substring(0,ind); }
-		var params={};
 		fetch("https://api.github.com/users/"+str)
 		.then(function(response) { return(response.json()); })
 		.then(
@@ -866,7 +886,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			}
 		var d5=new Date(udata.created_at);
 		var d6=new Date(udata.updated_at);
-		data1.innerHTML+="<table border=2 valign=center cellpadding=8><tr><td align=center><img src="+udata.avatar_url+"></td><td align=left width=100%><b>"+name+"</b><br>"+email+company+locat+twitter+udata.blog+bio+d5+" (Joined)<br>"+d6+" (Updated?)<br>"+udata.public_repos+" public repos<br>"+udata.public_gists+" public gists<br><a href='javascript:void(0)' onClick='getEngagementLists(\""+udata.followers_url+"\",\""+str+"\",\"Followers\")' style='color: "+colors[4]+"' title='Click to get a list of followers.'>"+udata.followers+" followers</a><br>"+following+"<br><button onClick='getEngagementLists(\""+udata.organizations_url+"\",\""+name+"\",\"Organizations\")' title='Click to get a list of organizations this user belongs to.'>Get Organizations</button>&nbsp;&nbsp;&nbsp;<button onClick='getEngagementLists(\""+udata.subscriptions_url+"\",\""+name+"\",\"Subscriptions\")' title='Click to get a list of repos this user subscribes to.'>Get Subscriptions</button>&nbsp;&nbsp;&nbsp;<button onClick='getEngagementLists(\"https://api.github.com/users/"+str+"/starred\",\""+name+"\",\"Starred\")' title='Click to get a list of repos this user starred.'>Get Starred Repos</button></td></tr></table>";
+		data1.innerHTML+="<table border=2 valign=center cellpadding=8><tr><td align=center><img src="+udata.avatar_url+"></td><td align=left width=100%><b>"+name+"</b><br>User ID: "+udata.id+"<br>"+email+company+locat+twitter+udata.blog+bio+d5+" (Joined)<br>"+d6+" (Updated?)<br>"+udata.public_repos+" public repos<br>"+udata.public_gists+" public gists<br><a href='javascript:void(0)' onClick='getEngagementLists(\""+udata.followers_url+"\",\""+str+"\",\"Followers\")' style='color: "+colors[4]+"' title='Click to get a list of followers.'>"+udata.followers+" followers</a><br>"+following+"<br><button onClick='getEngagementLists(\""+udata.organizations_url+"\",\""+name+"\",\"Organizations\")' title='Click to get a list of organizations this user belongs to.'>Get Organizations</button>&nbsp;&nbsp;&nbsp;<button onClick='getEngagementLists(\""+udata.subscriptions_url+"\",\""+name+"\",\"Subscriptions\")' title='Click to get a list of repos this user subscribes to.'>Get Subscriptions</button>&nbsp;&nbsp;&nbsp;<button onClick='getEngagementLists(\"https://api.github.com/users/"+str+"/starred\",\""+name+"\",\"Starred\")' title='Click to get a list of repos this user starred.'>Get Starred Repos</button></td></tr></table>";
 		//data1.innerHTML+="<table border=2 valign=center cellpadding=8><tr><td align=center><img src="+udata.avatar_url+"></td><td align=left width=860><b>"+udata.name+"</b><br>"+email+company+locat+udata.blog+bio+d5+" (Joined)<br>"+d6+" (Updated?)<br>"+udata.public_repos+" public repos<br>"+udata.public_gists+" public gists<br>"+udata.followers+" followers<br>"+following+"</td></tr></table>";
 		if (url===undefined)
 			{
@@ -1169,7 +1189,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 <div class="header" id="headerID">
 <div style="float:left">
 &nbsp;
-<input id="searchTextID" type="text" value="" maxlength="100" size=22 onkeypress='getRepoKeyb(event)' autofocus title="RepoOwner/RepoName or UserName or SearchString">
+<input id="searchTextID" type="text" value="" maxlength="100" size=22 onkeypress='getRepoKeyb(event)' autofocus title="RepoOwner/RepoName or UserName or @{UserID} or SearchString">
 <input id="refID" type="text" value="" maxlength="100" size=8 title="Branch, Commit, or Tag name">
 <button id="contentsID" onclick="gotoRepo(event)" title="Get Contents (Press 'Shift' while clicking to go to the github.com page for the repo.  Press 'Ctrl' while clicking to process README.md for markdown and open on new tab)">Contents</button>
 <button id="branchesID" onclick="getBranches()" title="Get Branches">Branches</button>

@@ -153,7 +153,8 @@ maximum of 100 per page.
   - Click the **User** button to view information about the user (including the
 user's repositories).  For this, in the top-left text input box, you can either
 specify only the username or both the username and repository name (as you
-would for the Contents button, etc.).  In the user information box, you can
+would for the Contents button, etc.).  You can also specify the user id number
+preceded by an **`@`** symbol.  In the user information box, you can
 click on the Followers data to get a list of followers,  Similarly, you can
 click on the Followings data (if present) to get a list of users the user
 follows.  Click the **Get Organizations** button to get a list of organizations
