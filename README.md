@@ -256,6 +256,9 @@ Type **`github -h`** for information on the options.  An example run would be:
 
     github mrmcsoftware
 
+>Note: You can also get the user's information, repositories, etc. by specifying
+>the user's ID number preceded by an **`@`** symbol instead of the username.
+
 ## Possible Improvements
 
 You might notice that my javascript code isn't always consistent in how it does

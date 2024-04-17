@@ -71,6 +71,8 @@ int per_page = 100, page = 0;		// result pagination variables
 char request[4096];
 char response[655360];
 
+char *getUserName(char *);
+
 int init_connection(char *hostname, char *port, struct addrinfo **res)
 {
 struct addrinfo hints;
@@ -193,6 +195,19 @@ ssl_ctx = SSL_CTX_new(SSLv23_client_method());
 // if redirecting output, don't use ANSI colors (unless override)
 if (!(isatty(1) || override)) { col = 0; }
 if (!col) { cols[0]=cols[1]=cols[2]=cols[3]=cols[4]=cols[5]=cols[6]=cols[7]=cols[8]=cols[b]=cols[10] = ""; }
+if (name[0] == '@')
+	{
+	// call by user id suggested by Coffee-Puff on reddit using
+	// method pointed out by statusfailed on stackoverflow (referring
+	// to docs.github.com)
+	unsigned long id;
+	char *sptr;
+	sscanf(name+1, "%ld", &id);
+	sprintf(response, "/users?since=%ld&per_page=1", id-1);
+	getJSON(hostname, response);
+	if (!(sptr = getUserName(strstr(response, "\r\n\r\n")))) { printf("%sError: User Id '%ld' not found%s\n", cols[4], id, cols[b]); user = repos = gists = 0; }
+	else { strcpy(name, sptr); }
+	}
 if (user)
 	{
 	strcpy(response, "/users/");
@@ -243,19 +258,36 @@ t = mktime(&tm) - timezone;
 return(ctime(&t));
 }
 
+char *getUserName(char *string)
+{
+json_t *root,*result,*login;
+
+root = load_json(string);
+if (!root) { return(NULL); }
+if ((json_is_array(root)) && (json_array_size(root)>0))
+	{
+	result = json_array_get(root, 0);
+	login = json_object_get(result, "login");
+	return((char *)json_string_value(login));
+	}
+else { return(NULL); }
+}
+
 int getUserInfo(char *string)
 {
 json_t *root,*message,*uname,*email,*company,*following,*bio,*locat,*twitter;
-json_t *blog,*createdat,*updatedat,*public_repos,*public_gists,*followers;
+json_t *blog,*createdat,*updatedat,*public_repos,*public_gists,*followers,*id;
 int i;
 
-root = load_json(strstr(response, "\r\n\r\n"));
+root = load_json(string);
 if (!root) { return(0); }
 message = json_object_get(root, "message");
 if (message) { printf("%sError: %s%s\n", cols[4], json_string_value(message), cols[b]); return(0); }
 uname = json_object_get(root, "name");
 if (uname) { printf("%s%s%s\n", cols[1], json_string_value(uname), cols[b]); }
 else { printf("%s(%s%s%s)\n", cols[b], cols[1], name, cols[b]); }
+id = json_object_get(root, "id");
+if (json_is_integer(id)) { printf("%sUser ID: %lld%s\n", cols[5], json_integer_value(id), cols[b]); }
 email = json_object_get(root, "email");
 if (json_is_string(email)) { printf("%s%s%s\n", cols[6], json_string_value(email), cols[b]); }
 company = json_object_get(root, "company");
@@ -291,7 +323,7 @@ json_t *licensespdx,*oissues,*createdat,*pushedat;
 char *s;
 int i, j, n;
 
-root = load_json(strstr(response, "\r\n\r\n"));
+root = load_json(strstr(string, "\r\n\r\n"));
 if (!root) { return; }
 message = json_object_get(root, "message");
 if (message) { printf("%sError: %s%s\n", cols[4], json_string_value(message), cols[b]); return; }
@@ -300,7 +332,7 @@ if (json_is_array(root))
 	{
 	for (i = 0; i < json_array_size(root); i++)
 		{
-    	repo = json_array_get(root, i);
+		repo = json_array_get(root, i);
 		rname = json_object_get(repo, "name");
 		fork = json_object_get(repo, "fork");
 		if (json_is_true(fork)) { s = "  (Fork)"; } else { s = ""; }
@@ -323,7 +355,7 @@ if (json_is_array(root))
 			printf("%sTopics:%s %s", cols[2], cols[b], json_string_value(topic));
 			for (j = 1; j < json_array_size(topics); j++)
 				{
-    			topic = json_array_get(topics, j);
+				topic = json_array_get(topics, j);
 				printf(", %s", json_string_value(topic));
 				}
 			printf("\n");
@@ -370,7 +402,7 @@ json_t *value,*filename,*size;
 int i, n;
 const char *key;
 
-root = load_json(strstr(response, "\r\n\r\n"));
+root = load_json(strstr(string, "\r\n\r\n"));
 if (!root) { return; }
 message = json_object_get(root, "message");
 if (message) { printf("%sError: %s%s\n", cols[4], json_string_value(message), cols[b]); return; }
@@ -380,7 +412,7 @@ if (json_is_array(root))
 	if (n) { printf("\n----------%s Gists %s----------\n\n", cols[0], cols[b]); }
 	for (i = 0; i < n; i++)
 		{
-    	gist = json_array_get(root, i);
+		gist = json_array_get(root, i);
 		id = json_object_get(gist, "id");
 		if (id) { printf("%s%s%s\n", cols[1], json_string_value(id), cols[b]); }
 		description = json_object_get(gist, "description");
