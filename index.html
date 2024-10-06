@@ -95,6 +95,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		var openonly=false;
 		var dirbut=true;
 		var urlstore=[undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined,undefined];
+		var noforks=false;
 
 		window.onload=function()
 		{
@@ -376,6 +377,11 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		});
 		}
 
+		function setRepo(reponame)
+		{
+		document.getElementById("searchTextID").value=reponame;
+		}
+
 		function getRepo()
 		{
 		sel=0;
@@ -404,7 +410,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			//if (data[i].download_url) { $("#data-1").append("<a target='_blank' rel='noopener noreferrer' href='"+data[i].download_url+"'>"+data[i].name+"</a>&nbsp;&nbsp;&nbsp;&nbsp;<font color='"+colors[0]+"'>"+data[i].size+"<font><br>"); }
 			else if (data[i].type==="dir")
 				{
-				if (dirbut) { $("#data-1").append("<button onclick=gotoRepoDirectory('"+path+"/"+data[i].name+"')>"+data[i].name+"</button><br>"); }
+				if (dirbut) { $("#data-1").append("<button onclick='gotoRepoDirectory(\""+path+"/"+data[i].name+"\")'>"+data[i].name+"</button><br>"); }
 				else { $("#data-1").append("<a href='javascript:void(0)' onClick='gotoRepoDirectory(\""+path+"/"+data[i].name+"\")' style='color: "+colors[0]+"'><b>"+data[i].name+"</b></a><br>"); }
 				}
 			else if (data[i].type==="file")
@@ -766,9 +772,10 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			});
 		}
 
-		function getUserInfo(url)
+		function getUserInfo(url,event)
 		{
 		sel=5; urlstore[sel]=url;
+		if (event!==undefined) { if (event.shiftKey) { noforks=true; } else { noforks=false; } }
 		$("#data-0").empty();
 		$("#data-1").empty();
 		$("#data-1").append("<br>");
@@ -785,7 +792,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			{
 			if (udata.length===0) { $("#data-1").append("User Not Found"); return; }
 			document.getElementById("searchTextID").value=udata[0].login;
-			getUserInfo(url);
+			getUserInfo(url,event);
 			}).fail(function(jqXHR,status,error)
 				{
 				$("<p style='color: #F55;font-size:38px;font-weight:bold'></p>").text(jqXHR.responseText||error||status).appendTo("#data-0");
@@ -838,7 +845,9 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			var altc4="<font color='"+colors[3]+"'>";
 			for (i=0;i<data.length;i++)
 				{
-				$("#data-1").append(altc4+data[i].name+"</font>");
+				if ((noforks)&&(data[i].fork===true)) { continue; }
+				$("#data-1").append("<a href='javascript:void(0)' onClick='setRepo(\""+str+"/"+data[i].name+"\")' style='color: "+colors[3]+"'>"+data[i].name+"</a>");
+				//$("#data-1").append(altc4+data[i].name+"</font>");
 				if (data[i].fork===true)
 					{
 					$("#data-1").append("&nbsp;&nbsp;&nbsp;&nbsp;<a href='javascript:void(0)' onClick='getOriginalRepoName(\""+data[i].full_name+"\")' style='color: "+colors[4]+"'>(Fork)</a>");
@@ -1101,7 +1110,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 <button id="issuesID" onclick="getIssues()" title="Get Issues">Issues</button>
 <button id="pullsID" onclick="getPulls()" title="Get Pull Requests">Pulls</button>
 <button id="infoID" onclick="getInfoMetrics()" title="Get Repo Info/Metrics">Info</button>
-<button id="userID" onclick="getUserInfo()" title="Get User Info/Metrics">User</button>
+<button id="userID" onclick="getUserInfo(undefined,event)" title="Get User Info/Metrics (Press 'Shift' while clicking to only list repos the user has created.  Reset by clicking without 'Shift')">User</button>
 <button id="gistID" onclick="getGists()" title="Get User's Gists">Gists</button>
 <!--button id="searchReposID" onclick="searchRepos()" title="Search Repositories">&#x2315;</button-->
 <button id="searchReposID" onclick="searchRepos()" title="Search Repositories"><div style="-webkit-transform: rotate(-45deg);

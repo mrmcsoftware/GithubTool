@@ -91,8 +91,10 @@ you probably will need to escape the special characters, depending on your OS
 ### Text Boxes, Buttons, Checkboxes, and Links
 
   - To access a repository or user, type it into the top-left text input box.
-Repositories must be in for form of {username}/{reponame}.  For example:
-"**`mrmcsoftware/vec-mat-comp-quat`**".
+Repositories should be in for form of {username}/{reponame}.  For example:
+"**`mrmcsoftware/vec-mat-comp-quat`**".  However, "https://github.com/" can be
+prefixed (for example: "https://github.com/mrmcsoftware/vec-mat-comp-quat" is
+fine).
 You can either press "**Enter**" on keyboard after you type the string or click
 the appropriate button (such as **Contents**).  If you press **Enter**, the
 repository's contents will be shown.
@@ -173,6 +175,15 @@ repo (again, watchers and subscribers are used somewhat interchangeably, so
 the listing might contain a different number of users that what's reported).
 Also note that Github's API documentation doesn't explain what their **update**
 date means (is it a push?, etc.).
+
+    Clicking on a repository name will put that repository's designation in
+the search box, so that information on that repository can more easily be viewed
+(via **Contents**, etc.).
+
+    If only a list of the user's repositories that they themselves created
+(rather than forked) is desired, press the **Shift** key while clicking the
+**User** button.  Reset this feature back by clicking on the **User** button
+without pressing **Shift**.
 
     The repo listing will paginate if more than 100 repos.
 
