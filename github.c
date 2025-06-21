@@ -7,9 +7,21 @@
 
 To compile, you'll need both OpenSSL and the Jansson JSON
 API library (https://github.com/akheron/jansson) installed
-Compile with:
+(or use yyjson (https://github.com/ibireme/yyjson))
+
+Linux, compile with:
 
     cc -o github github.c -lssl -ljansson
+or, to use yyjson instead of jansson:
+    cc -DYYJSON -I. -o github github.c -lssl
+
+Windows, if using Microsoft Visual C compiler, compile with:
+
+    cl github.c /MD libcrypto.lib libssl.lib ws2_32.lib
+or, to use yyjson instead of jansson:
+    cl github.c /D YYJSON /MD -I. libcrypto.lib libssl.lib ws2_32.lib
+or, to compile with Visual Studio 6 (or is it old Microsoft SDK):
+    cl github.c /D NO_GETADDRINFO /D YYJSON /MD -I. libcrypto.lib libssl.lib ws2_32.lib
 
 **********************************************************
 NOTE: The network code is based on code from the internet.
@@ -17,14 +29,53 @@ Unfortunately, I can't remember where I saw it, so can't
 give attribution.
 **********************************************************/
 
+#define _USING_V110_SDK71_ // To get rid of sal_supp.h __useHeader warnings, etc
+
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <netdb.h>
 #include <openssl/ssl.h>
+#ifdef YYJSON
+#include <janssonlike.h>
+#else
 #include <jansson.h>
+#endif
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <netdb.h>
+#endif
 
-#define error_unless(A,M,...) if (!(A)) { fprintf(stderr,M "\n", ##__VA_ARGS__); error(); }
+//#define NO_GETADDRINFO
+
+#ifdef NO_GETADDRINFO
+
+typedef struct addrinfo
+	{
+	int ai_flags;
+	int ai_family;
+	int ai_socktype;
+	int ai_protocol;
+	size_t ai_addrlen;
+	char *ai_canonname;
+	struct sockaddr *ai_addr;
+	struct addrinfo *ai_next;
+	} ADDRINFO;
+
+struct addrinfo _addrInfo;
+struct sockaddr_in _sockAddr;
+
+// NOTE: you can use gai_strerror from Microsoft SDK v7.1 and beyond.
+//       I didn't include it here because it might be copyrighted
+
+#endif
+
+#ifdef YYJSON
+
+yyjson_doc *_jsonDoc = NULL;
+
+#endif
 
 SSL_CTX *ssl_ctx;
 SSL *conn;
@@ -77,10 +128,33 @@ int init_connection(char *hostname, char *port, struct addrinfo **res)
 {
 struct addrinfo hints;
 
+#ifdef NO_GETADDRINFO
+
+struct hostent *host;
+char *IP;
+
+host = gethostbyname(hostname);
+if (host == NULL) { return(WSAGetLastError()); }
+IP = inet_ntoa(*(struct in_addr *)host->h_addr_list[0]);
+_sockAddr.sin_family = AF_INET;
+_sockAddr.sin_port = htons(443); // https
+_sockAddr.sin_addr.s_addr = inet_addr(IP);
+_addrInfo.ai_addr = (struct sockaddr *)&_sockAddr;
+_addrInfo.ai_family = AF_INET;
+_addrInfo.ai_socktype = SOCK_STREAM;
+_addrInfo.ai_protocol = IPPROTO_TCP;
+_addrInfo.ai_addrlen = sizeof(struct sockaddr);
+*res=&_addrInfo;
+return(0);
+
+#else
+
 memset(&hints, 0, sizeof(hints));
 hints.ai_family = AF_UNSPEC;
 hints.ai_socktype = SOCK_STREAM;
 return(getaddrinfo(hostname, port, &hints, res));
+
+#endif
 }
 
 int make_connection(struct addrinfo *res)
@@ -124,8 +198,17 @@ return(status);
 
 error()
 {
-if (sockfd > 0) { close(sockfd); }
+if (sockfd > 0)
+	{
+#ifdef _WIN32
+	closesocket(sockfd);
+#else
+	close(sockfd);
+#endif
+	}
+#ifndef NO_GETADDRINFO
 if (res != NULL) { freeaddrinfo(res); }
+#endif
 // probably should free/close SSL stuff
 exit(1);
 }
@@ -133,27 +216,39 @@ exit(1);
 getJSON(char *hostname, char *path)
 {
 int status = 0;
+int err;
 
 sockfd = make_connection(res);
-error_unless(sockfd > 0, "Could not make connection to '%s' on port '%s'", hostname, port);
+if (!(sockfd > 0)) { fprintf(stderr, "Could not make connection to '%s' on port '%s'\n", hostname, port); error(); }
 conn = SSL_new(ssl_ctx);
 SSL_set_fd(conn, sockfd);
-int err = SSL_connect(conn);
+err = SSL_connect(conn);
 if (err != 1) { printf("SSL error\n"); }
 status = make_request(sockfd, hostname, path);
-error_unless(status > 0, "Sending request failed");
+if (!(status > 0)) { fprintf(stderr, "Sending request failed\n"); error(); }
 status = fetch_response(sockfd);
-error_unless(status >= 0, "Fetching response failed");
+if (!(status >= 0)) { fprintf(stderr, "Fetching response failed\n"); error(); }
 if ((SSL_shutdown(conn)) == 0) { SSL_shutdown(conn); }
 SSL_free(conn);
+#ifdef _WIN32
+closesocket(sockfd);
+#else
 close(sockfd);
+#endif
 }
 
 main(int argc, char **argv)
 {
 int status = 0, i, repos = 1, user = 1, gists = 1, override = 0;
 char *hostname = "api.github.com";
+#ifdef _WIN32
+WSADATA wd = {0};
+WSAStartup(WINSOCK_VERSION, &wd);
+#endif
 
+#ifdef _WIN32
+tzset();
+#endif
 for (i = 1; i < argc; i++)
 	{
 	if (argv[i][0] == '-')
@@ -188,7 +283,12 @@ for (i = 1; i < argc; i++)
 	else { strcpy(name, argv[i]); }
 	}
 status = init_connection(hostname, port, &res);
-error_unless(status == 0, "Could not resolve host: %s\n", gai_strerror(status));
+// Change if you have gai_strerror:
+#if WIN32 && _MSC_VER == 1200
+if (status != 0) { fprintf(stderr, "Could not resolve host: %d\n", status); error(); }
+#else
+if (status != 0) { fprintf(stderr, "Could not resolve host: %s\n", gai_strerror(status)); error(); }
+#endif
 SSL_load_error_strings();
 SSL_library_init();
 ssl_ctx = SSL_CTX_new(SSLv23_client_method());
@@ -207,6 +307,9 @@ if (name[0] == '@')
 	getJSON(hostname, response);
 	if (!(sptr = getUserName(strstr(response, "\r\n\r\n")))) { printf("%sError: User Id '%ld' not found%s\n", cols[4], id, cols[b]); user = repos = gists = 0; }
 	else { strcpy(name, sptr); }
+#ifdef YYJSON
+	yyjson_doc_free(_jsonDoc);
+#endif
 	}
 if (user)
 	{
@@ -214,6 +317,9 @@ if (user)
 	strcat(response, name);
 	getJSON(hostname, response);
 	if (!getUserInfo(strstr(response, "\r\n\r\n"))) { repos = gists = 0; }
+#ifdef YYJSON
+	yyjson_doc_free(_jsonDoc);
+#endif
 	}
 if (repos)
 	{
@@ -221,6 +327,9 @@ if (repos)
 	if (page) { sprintf(request, "&page=%d", page); strcat(response, request); }
 	getJSON(hostname, response);
 	getUserRepos(strstr(response, "\r\n\r\n"));
+#ifdef YYJSON
+	yyjson_doc_free(_jsonDoc);
+#endif
 	}
 if (gists)
 	{
@@ -228,13 +337,30 @@ if (gists)
 	if (page) { sprintf(request, "&page=%d", page); strcat(response, request); }
 	getJSON(hostname, response);
 	getUserGists(strstr(response, "\r\n\r\n"));
+#ifdef YYJSON
+	yyjson_doc_free(_jsonDoc);
+#endif
 	}
 if (b == 10) { printf("%s", cols[9]); }
+#ifndef NO_GETADDRINFO
 freeaddrinfo(res);
+#endif
 }
 
 json_t *load_json(const char *text)
 {
+#ifdef YYJSON
+yyjson_doc *root;
+
+root=yyjson_read(text, strlen(text), 0);
+_jsonDoc = root;
+if (root) { return(yyjson_doc_get_root(root)); }
+else
+	{
+	fprintf(stderr, "json error\n");
+	return((json_t *)0);
+	}
+#else
 json_t *root;
 json_error_t error;
 
@@ -245,6 +371,7 @@ else
 	fprintf(stderr, "json error on line %d: %s\n", error.line, error.text);
 	return((json_t *)0);
 	}
+#endif
 }
 
 char *convertISO8601(const char *str)
@@ -253,8 +380,18 @@ struct tm tm;
 time_t t;
 
 memset(&tm, 0, sizeof(tm));
+#ifdef _WIN32
+// Not perfect, need to set tm_isdst
+sscanf(str, "%4d-%2d-%2dT%2d:%2d:%2dZ", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+tm.tm_year-=1900;
+tm.tm_mon--;
+tm.tm_isdst=-1;
+t = mktime(&tm) + timezone; // Why + ?
+t+=3600; // handle dst ?
+#else
 strptime(str, "%FT%T%z", &tm);
 t = mktime(&tm) - timezone;
+#endif
 return(ctime(&t));
 }
 
@@ -287,7 +424,11 @@ uname = json_object_get(root, "name");
 if (uname) { printf("%s%s%s\n", cols[1], json_string_value(uname), cols[b]); }
 else { printf("%s(%s%s%s)\n", cols[b], cols[1], name, cols[b]); }
 id = json_object_get(root, "id");
+#ifdef YYJSON
+if (json_is_integer(id)) { printf("%sUser ID: %lld%s\n", cols[5], yyjson_get_uint(id), cols[b]); }
+#else
 if (json_is_integer(id)) { printf("%sUser ID: %lld%s\n", cols[5], json_integer_value(id), cols[b]); }
+#endif
 email = json_object_get(root, "email");
 if (json_is_string(email)) { printf("%s%s%s\n", cols[6], json_string_value(email), cols[b]); }
 company = json_object_get(root, "company");
@@ -400,7 +541,13 @@ getUserGists(char *string)
 json_t *root,*message,*gist,*id,*description,*createdat,*updatedat,*files;
 json_t *value,*filename,*size;
 int i, n;
+#ifdef YYJSON
+size_t _yyidx, _yymax;
+yyjson_val *_yykey;
+char *key;
+#else
 const char *key;
+#endif
 
 root = load_json(strstr(string, "\r\n\r\n"));
 if (!root) { return; }
@@ -423,7 +570,11 @@ if (json_is_array(root))
 		printf("%sUpdated:%s %s", cols[2], cols[b], convertISO8601(json_string_value(updatedat)));
 		files = json_object_get(gist, "files");
 		//printf("%d \n", json_object_size(files));
+#ifdef YYJSON
+		yyjson_obj_foreach(files, _yyidx, _yymax, _yykey, value)
+#else
 		json_object_foreach(files, key, value)
+#endif
 			{
 			// In the case of github's gist response, my key variable should
 			// be the filename (ie: same as value associated with filename key)

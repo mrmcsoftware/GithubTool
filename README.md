@@ -256,12 +256,35 @@ definitions).  I've tried to approximate the look to some extent, though.
 <img src="screenshotcp.png">
 
 I've included a C program I wrote which gets the specified user's information,
-a list of the user's repositories, and a list of the user's gists.  It's written
-for Linux, but with some effort, it could be rewritten to work in Windows.  To
-compile, you'll need both OpenSSL and the Jansson JSON API library
-(https://github.com/akheron/jansson) installed.  Compile with:
+a list of the user's repositories, and a list of the user's gists.  It was
+originally written for Linux, but I've modified it to work in Windows as well.
+To compile, you'll need both OpenSSL and either the Jansson JSON API library
+(https://github.com/akheron/jansson) or the yyjson JSON API library
+(https://github.com/ibireme/yyjson) installed.
+
+For Linux, compile with:
 
     cc -o github github.c -lssl -ljansson
+
+or, to use yyjson instead of jansson:
+
+    cc -DYYJSON -I. -o github github.c -lssl
+
+For Windows, compile with (assuming Visual Studio installed):
+
+    cl github.c /MD libcrypto.lib libssl.lib ws2_32.lib
+
+or, to use yyjson instead of jansson:
+
+    cl github.c /D YYJSON /MD -I. libcrypto.lib libssl.lib ws2_32.lib
+
+or, to compile with Visual Studio 6 (or is it old Microsoft SDK):
+
+    cl github.c /D NO_GETADDRINFO /D YYJSON /MD -I. libcrypto.lib libssl.lib ws2_32.lib
+
+>**NOTE:**  The /MD is optional.  Also, you will likely need to compile OpenSSL
+>yourself (for libcrypto.lib and libssl.lib and the associated DLLs) since it
+>may be hard to find appropriate binary distributions online.
 
 Type **`github -h`** for information on the options.  An example run would be:
 
