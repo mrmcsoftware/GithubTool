@@ -241,8 +241,9 @@ Because of human or bot abuse, github now requires authentication in order to
 find out who starred or watches (or is the term follows?) **your** repositories
 (**your** because you can no longer get the list for repos that aren't yours).
 Due to this, I added authentication.  As of the time of writing this, the
-process of creating a PAT is:
-  - Click on your profile icon at the top-right corner and go to **Settings**,
+process of creating a PAT on github.com is:
+  - While logged into your github.com account and on the github.com page, Click
+on your profile icon at the top-right corner and go to **Settings**,
 then **Developer settings**, then **Personal access tokens**.  I chose to create
 a fine-grained token but you may choose to create a classic token.  I'll assume
 you will choose fine-grained so go to **Fine-grained tokens** and click
