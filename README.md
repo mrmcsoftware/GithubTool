@@ -40,7 +40,7 @@ specify the whole path.
 For a live demo, go to **https://mrmcsoftware.github.io/GithubTool** but do
 try to use your own copy instead.
 
->Note: Ignore **`index.html`** and **`jquery.min.js`** .  They are only there
+>**Note:** Ignore **`index.html`** and **`jquery.min.js`** .  They are only there
 >to make Github Pages work.
 
 ## User Interface
@@ -215,9 +215,9 @@ purposely didn't put in support for information that I felt wouldn't be needed
 by most people.  And there is some information that can't be accessed without
 being logged in (authenticated), and in some cases can't be accessed without
 having "**push**" access to the repository (for example, not being the owner of
-the repository).  Authentication could be added to this tool, but I didn't feel
+the repository).  ~~Authentication could be added to this tool, but I didn't feel
 like implementing it (I've done it for other APIs, but didn't have a need to
-do it for github.com).
+do it for github.com).~~ (no longer applies)
 
 Also, keep in mind there are rate limits on your usage of github.com's API.
 Under normal usage, you probably wouldn't hit the limits, but searches do have
@@ -234,6 +234,89 @@ or fetch (some browsers don't have fetch).
 
 >**NOTE:**  The no-jQuery versions seem to be slower at getting stuff from
 >github.com than the jQuery version.
+
+## Authentication via Personal Access Tokens (PAT)
+
+Because of human or bot abuse, github now requires authentication in order to
+find out who starred or watches (or is the term follows?) **your** repositories
+(**your** because you can no longer get the list for repos that aren't yours).
+Due to this, I added authentication.  As of the time of writing this, the
+process of creating a PAT is:
+  - Click on your profile icon at the top-right corner and go to **Settings**,
+then **Developer settings**, then **Personal access tokens**.  I chose to create
+a fine-grained token but you may choose to create a classic token.  I'll assume
+you will choose fine-grained so go to **Fine-grained tokens** and click
+**Generate new token**.
+  - Choose your **Expiration**.  I chose **No expiration**.
+  - Choose your **Repository access**.  It's easier to just choose
+**All repositories**.
+  - Add your **Permissions**.  In order to get lists of people who starred or
+watched/followed your repo and to see your repo's traffic information, you will
+need to add **Administration**, **Metadata**, and **Contents** permissions.
+Change **Contents** to **Read and write** (write access required for stargazers
+and follows but not traffic).  These permission requirements might change in the
+future (for example, maybe you won't need write permission on Contents.  At the
+time, github maintainers said write was required due to it being the only way to
+get certain information that would be required to generate a list of
+stargazers, which IMO is **insane** - write access to get a list of stargazers,
+now that's crazy; don't be lazy, change your code to get the information some
+other way).
+  - Click **Generate token**.  And again in the popup.
+You will get a token string.  You can click the copy icon to copy it, or do it
+the old-fashioned way.
+
+You can choose to either provide this PAT at the first attempt in my
+**`github*.html`** pages to use a feature that requires authentication (you
+would only need to do this once per session) or place your PAT in the various
+**`github*.html`** files in the line containing **`var pat="";`** (not to be
+confused with var path="";).  If you put your PAT in these files, you won't be
+prompted to input your PAT.  Since write permission on **Contents** is selected,
+you **MUST** be careful who might have access to your PAT (or **`github*.html`**
+files if you chose to put your PAT in them).  You could choose to put your PAT in
+a file in a completely different directory, gzip it, change the filename so it
+isn't immediately apparent it was gzipped (obviously won't deter a hacker much,
+though), and then when you need it, do **`zcat filename | gclip`** (with
+**'gclip'** being an alias for **`xclip -i -selection clipboard`** on Linux and
+a program for Windows (I don't remember where I got gclip/pclip from, but in
+its help information it says to send bug reports to syring (rest of email
+address omitted for his/her protection))).  Once the PAT is in the clipboard,
+you can paste the captured text into the PAT prompt.
+>**Tip for the cautious:** I suppose a more secure method would be to use 7z (7zip) with
+>a password (**`7z -mhe=on -t7z -p`**) to zip up the file containing your PAT,
+>then, when needed, use 7z to extract the PAT file by providing the password you chose when
+>you created the zip archive, then **`gclip < {extracted file}`**, then delete
+>the extracted file.  Some users may want to do the zip extraction in a RAMdrive
+>to avoid hacker scanning of no longer used clusters (though not as much
+>necessary in the case of SSDs), hopefully RAM would no longer have the PAT,
+>though.  And those users would also want to clear the clipboard after the PAT
+>is used.  Being secure is a lot of work!
+
+Since I was forced to put authentication into these pages, I decided to add the
+equivalent of github.com's **Insights -> Traffic**.  To use this feature, add
+your username to the line in the **`github*.html`** files that contains
+**`var me="";`**.  Then when you list your repos, a **Traffic** button will
+appear on the Language/Stars/Forks line.  Here's some screenshots of this new
+feature (I think they look nicer than github.com's and they come up a lot faster
+too).
+
+<img src="screenshottraf1.png">
+
+<img src="screenshottraf2.png">
+
+<img src="screenshottraf3.png">
+
+Also provided in this traffic report is whether anyone created an Issue or Pull
+request in the last 14 days.
+
+A nice benefit of adding your username to **`me`** is you can now just click on
+the **User** button to get your information and repos without having to type
+your username in the search box.
+
+Also, any repo that you forked will have a **Compare** button next to the
+**(fork)** link.  Click this button if you want to know whether your fork is
+ahead or behind the parent/original repo in terms of commits.  This doesn't
+require authentication, but if you use authentication, the rate limit will be
+higher.
 
 ## Bonus Tool<a name="bonustool"></a>
 
@@ -290,7 +373,7 @@ Type **`github -h`** for information on the options.  An example run would be:
 
     github mrmcsoftware
 
->Note: You can also get the user's information, repositories, etc. by specifying
+>**Note:** You can also get the user's information, repositories, etc. by specifying
 >the user's ID number preceded by an **`@`** symbol instead of the username.
 
 ## Possible Improvements
@@ -310,10 +393,10 @@ jquery.min.js to the same directory as github.html and avoid getting it
 from the internet every time.  Or use **`github-no-jquery.html`** or
 **`github-no-jquery-no-fetch.html`** to avoid jQuery altogether.
 
-As stated above, authentication could be added in order to access some aspects
-of Github.com's API.  As is, this tool is for viewing, NOT changing, updating,
-deleting, or creating github.com content.  To do the CUD part of CRUD,
-authentication would need to be implemented.
+~~As stated above, authentication could be added in order to access some aspects
+of Github.com's API.~~  As is, this tool is for viewing, NOT changing, updating,
+deleting, or creating github.com content.  ~~To do the CUD part of CRUD,
+authentication would need to be implemented.~~
 
 ## Author
 

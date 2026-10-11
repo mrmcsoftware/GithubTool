@@ -97,6 +97,13 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		var noforks=false;
 		var links="";
 		var data0;
+		var cug,vug,c_g,vg,ccug,cvug,ccg,cvg,tooltip,elems;
+		var clones,views,poppaths,popref,issues,pulls;
+		var oldind=-1;
+		var traffic;
+
+		var me="";
+		var pat="";
 
 		window.onload=function()
 		{
@@ -403,7 +410,8 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 				{
 				var data=request.response; // if responseType==='json'
 				//var data=JSON.parse(request.responseText); // otherwise
-				myAlert(data.source.full_name,"Original Repo:");
+				if (data.parent.full_name===data.source.full_name) { myAlert("<br>"+data.source.full_name+"<br><br>","Original Repo:"); }
+				else { myAlert("<br><b><font color='#00cfff'>Original: </font></b>"+data.source.full_name+"<br><b><font color='#00cfff'>Parent: </font></b>"+data.parent.full_name+"<br><br>","Original/Parent Repo:"); }
 				}
 			else
 				{
@@ -792,8 +800,18 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		request.send();
 		}
 
+		function getPat(url,reponame,metric)
+		{
+		pat=prompt("Please enter your required Personal Access Token");
+		if (pat!==null)
+			{
+			getEngagementLists(url,reponame,metric);
+			}
+		}
+
 		function getEngagementLists(url,reponame,metric)
 		{
+		if (((metric==="Stargazers")||(metric==="Subscribers/Watchers"))&&(pat==="")) { getPat(url,reponame,metric); return; }
 		// just getting at most 100, not bothering with pagination
 		var params={};
 		params.per_page=100;
@@ -802,6 +820,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		var request=new XMLHttpRequest();
 		request.responseType='json';
 		request.open('GET',url+'?'+query,true);
+		if (pat!=="") { request.setRequestHeader("Authorization", "Bearer "+pat); }
 		request.onload=function()
 			{
 			if ((request.status>=200)&&(request.status<400))
@@ -952,6 +971,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		data1.innerHTML=null;
 		data1.innerHTML+="<br>";
 		var str=document.querySelector("#searchTextID").value;
+		if ((str==="")&&(me!=="")) { str=me; document.getElementById("searchTextID").value=str; }
 		var params={};
 		if (str.charAt(0)==='@')
 			{
@@ -1045,7 +1065,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 							//data1.innerHTML+=altc4+data[i].name+"</font>";
 							if (data[i].fork===true)
 								{
-								data1.innerHTML+="&nbsp;&nbsp;&nbsp;&nbsp;<a href='javascript:void(0)' onClick='getOriginalRepoName(\""+data[i].full_name+"\")' style='color: "+colors[4]+"'>(Fork)</a>";
+								data1.innerHTML+="&nbsp;&nbsp;&nbsp;&nbsp;<a href='javascript:void(0)' onClick='getOriginalRepoName(\""+data[i].full_name+"\")' style='color: "+colors[4]+"'>(Fork)</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button onclick='compareRepo(\""+data[i].full_name+"\")' title='Compare this fork to original repository'>Compare</button>";
 								}
 							if (data[i].description)
 								{
@@ -1062,6 +1082,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 							if (data[i].stargazers_count>0) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;"+altc+"Stars: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data[i].stargazers_url+"\",\""+data[i].name+"\",\"Stargazers\")' style='color: "+colors[4]+"' title='Click to get a list of stargazers.'>"+data[i].stargazers_count+"</a>"; }
 							//if (data[i].forks_count>0) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;"+altc+"Forks: </font>"+data[i].forks_count; }
 							if (data[i].forks_count>0) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;"+altc+"Forks: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data[i].forks_url+"\",\""+data[i].name+"\",\"Forkers\")' style='color: "+colors[4]+"' title='Click to get a list of forkers.'>"+data[i].forks_count+"</a>"; }
+							if (str===me) { data1.innerHTML+="&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button onclick='getTraffic(\""+me+"\",\""+data[i].name+"\")'>Traffic</button>"; }
 							data1.innerHTML+="<br>";
 							if (data[i].topics.length>0)
 								{
@@ -1388,11 +1409,474 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		str=str.replace(/ /g,'').replace(/https:\/\/github.com\//,'');
 		window.open('https://github.com/'+str,'_blank');
 		}
+
+		function compareRepo(forkedname)
+		{
+		var request=new XMLHttpRequest();
+		request.responseType='json';
+		request.open('GET',"https://api.github.com/repos/"+forkedname,true);
+		if (pat!=="") { request.setRequestHeader("Authorization", "Bearer "+pat); }
+		request.onload=function()
+			{
+			if ((request.status>=200)&&(request.status<400))
+				{
+				var data=request.response;
+				//console.log(data);
+				var originalOwner=data.parent.full_name.split('/')[0];
+				var forkOwner=data.full_name.split('/')[0];
+				// might want to ensure you are authenticated since
+				// authentication gives a higher rate limit quota
+				var request2=new XMLHttpRequest();
+				request2.responseType='json';
+				request2.open('GET',"https://api.github.com/repos/"+data.parent.full_name+"/compare/"+originalOwner+":"+data.parent.default_branch+"..."+forkOwner+":"+data.default_branch,true);
+				if (pat!=="") { request2.setRequestHeader("Authorization", "Bearer "+pat); }
+				request2.onload=function()
+					{
+					if ((request2.status>=200)&&(request2.status<400))
+						{
+						cdata=request2.response;
+						//console.log(cdata);
+						myAlert("<br><b><font color='#00ffff'>Ahead by: </font>"+cdata.ahead_by+"&nbsp;&nbsp;&nbsp;<font color='#00ffff'>Behind by: </font>"+cdata.behind_by+"&nbsp;&nbsp;&nbsp;<font color='#00ffff'>Total commits: </font>"+cdata.total_commits+"</b><br><br>","Commit Comparison With Parent:");
+						}
+					};
+				request2.send();
+				}
+			};
+		request.send();
+		}
+
+		function getClonesData(url)
+		{
+		var request=new XMLHttpRequest();
+		request.responseType='json';
+		request.open('GET',url,true);
+		if (pat!=="") { request.setRequestHeader("Authorization", "Bearer "+pat); }
+		request.onload=function()
+			{
+			if ((request.status>=200)&&(request.status<400))
+				{
+				clones=request.response;
+				//console.log(clones);
+				plotGraph(ccg,0);
+				plotGraph(ccug,1);
+				}
+			};
+		request.onerror=function(e)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+request.responseText||e.target.statusText||" Network Error "+"</p>";
+			};
+		request.send();
+		}
+
+		function getViewsData(url)
+		{
+		var request=new XMLHttpRequest();
+		request.responseType='json';
+		request.open('GET',url,true);
+		if (pat!=="") { request.setRequestHeader("Authorization", "Bearer "+pat); }
+		request.onload=function()
+			{
+			if ((request.status>=200)&&(request.status<400))
+				{
+				views=request.response;
+				//console.log(views);
+				plotGraph(cvg,2);
+				plotGraph(cvug,3);
+				}
+			};
+		request.onerror=function(e)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+request.responseText||e.target.statusText||" Network Error "+"</p>";
+			};
+		request.send();
+		}
+
+		function getPopRefsData(url)
+		{
+		var request=new XMLHttpRequest();
+		request.responseType='json';
+		request.open('GET',url,true);
+		if (pat!=="") { request.setRequestHeader("Authorization", "Bearer "+pat); }
+		request.onload=function()
+			{
+			if ((request.status>=200)&&(request.status<400))
+				{
+				popref=request.response;
+				//console.log(popref);
+				displayRefSites();
+				}
+			};
+		request.onerror=function(e)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+request.responseText||e.target.statusText||" Network Error "+"</p>";
+			};
+		request.send();
+		}
+
+		function getPopPathsData(url)
+		{
+		var request=new XMLHttpRequest();
+		request.responseType='json';
+		request.open('GET',url,true);
+		if (pat!=="") { request.setRequestHeader("Authorization", "Bearer "+pat); }
+		request.onload=function()
+			{
+			if ((request.status>=200)&&(request.status<400))
+				{
+				poppaths=request.response;
+				//console.log(poppaths);
+				displayPopContents();
+				}
+			};
+		request.onerror=function(e)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+request.responseText||e.target.statusText||" Network Error "+"</p>";
+			};
+		request.send();
+		}
+
+		function getIssues14Days(url,since)
+		{
+		var params={};
+		params.state="all";
+		params.since=since;
+		params.per_page=100;
+		var query="?"+Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+		var request=new XMLHttpRequest();
+		request.responseType='json';
+		request.open('GET',url+query,true);
+		if (pat!=="") { request.setRequestHeader("Authorization", "Bearer "+pat); }
+		request.onload=function()
+			{
+			issues=request.response;
+			//console.log(issues);
+			displayIssues();
+			};
+		request.onerror=function(e)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+request.responseText||e.target.statusText||" Network Error "+"</p>";
+			};
+		request.send();
+		}
+
+		function getPulls14Days(url,since)
+		{
+		/*
+		var params={};
+		params.state="all";
+		params.since=since;
+		params.per_page=100;
+		var query="?"+Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+		*/
+		var query="";
+		var request=new XMLHttpRequest();
+		request.responseType='json';
+		request.open('GET',url+query,true);
+		if (pat!=="") { request.setRequestHeader("Authorization", "Bearer "+pat); }
+		request.onload=function()
+			{
+			pulls=request.response;
+			console.log(pulls);
+			displayPulls();
+			};
+		request.onerror=function(e)
+			{
+			document.querySelector("#data-0").innerHTML="<p style='color: #F55;font-size:38px;font-weight:bold'>"+request.responseText||e.target.statusText||" Network Error "+"</p>";
+			};
+		request.send();
+		}
+
+		function displayIssues()
+		{
+		var html="<div class='tfont'>";
+		if (issues.length===0) { html+="<br>No issue data available for this period"; }
+		else
+			{
+			html+="<br><span style='background-color:#7f0000; padding: 10px;'><b>&nbsp;&nbsp;"+issues.length+" Issue Interactions&nbsp;&nbsp;</b></span><br><br>";
+			html+="<table style='color:#ffffff; border-collapse: collapse; width: 95%' border=0 valign=center cellpadding=7>";
+			html+="<tr><th class='tth'>#</th><th class='tth'>Title</th><th class='tth'>Author</th></tr>";
+			for (i=0;i<issues.length;i++)
+				{
+				if (issues[i].state==="open") { html+="<tr><td class='ttdo'>"; }
+				else if (issues[i].state==="closed") { html+="<tr><td class='ttdc'>"; }
+				html+=issues[i].number+"</td><td class='ttd'>"+issues[i].title+"</td><td class='ttd'>"+issues[i].user.login+"</td></tr>";
+				}
+			html+="</table>";
+			}
+		html+="</div>";
+		var elem=traffic.document.getElementById('issues14DaysID');
+		elem.innerHTML=html;
+		}
+
+		function displayPulls()
+		{
+		var html="<div class='tfont'>";
+		if (pulls.length===0) { html+="<br>No pull request data available for this period"; }
+		else
+			{
+			html+="<br><span style='background-color:#7f0000; padding: 10px;'><b>&nbsp;&nbsp;"+pulls.length+" Pull Interactions&nbsp;&nbsp;</b></span><br><br>";
+			html+="<table style='color:#ffffff; border-collapse: collapse; width: 95%' border=0 valign=center cellpadding=7>";
+			html+="<tr><th class='tth'>#</th><th class='tth'>Title</th><th class='tth'>Author</th></tr>";
+			for (i=0;i<pulls.length;i++)
+				{
+				if (pulls[i].state==="open") { html+="<tr><td class='ttdo'>"; }
+				else if (pulls[i].state==="closed") { html+="<tr><td class='ttdc'>"; }
+				html+=pulls[i].number+"</td><td class='ttd'>"+pulls[i].title+"</td><td class='ttd'>"+pulls[i].user.login+"</td></tr>";
+				}
+			html+="</table>";
+			}
+		html+="</div>";
+		var elem=traffic.document.getElementById('pulls14DaysID');
+		elem.innerHTML=html;
+		}
+
+		function plotGraph(hdc,plot)
+		{
+		var i,max=0;
+		var xs=1.0,ys=1.0,x=0.0,y=0.0,yn=0.0,lpos=0.0;
+		var xd=300.0,xp=50.0,yd=150.0,yt=20.0,val0=0.0;
+		var len;
+		var list;
+		var yaxislabel,header;
+		switch (plot)
+			{
+			case 0: len=clones.clones.length; list=clones.clones; lpos=-115.0;
+				for (i=0;i<len;i++) { if (list[i].count>max) { max=list[i].count; } }
+				header=clones.count+" Clones";
+				yaxislabel="Clones";
+				val0=list[0].count;
+				break;
+			case 1: len=clones.clones.length; list=clones.clones; lpos=-120.0;
+				for (i=0;i<len;i++) { if (list[i].uniques>max) { max=list[i].uniques; } }
+				header=clones.uniques+" Unique cloners";
+				yaxislabel="Cloners";
+				val0=list[0].uniques;
+				break;
+			case 2: len=views.views.length; list=views.views; lpos=-125.0;
+				for (i=0;i<len;i++) { if (list[i].count>max) { max=list[i].count; } }
+				header=views.count+" Views";
+				yaxislabel="Total views";
+				val0=list[0].count;
+				break;
+			case 3: len=views.views.length; list=views.views; lpos=-130.0;
+				for (i=0;i<len;i++) { if (list[i].uniques>max) { max=list[i].uniques; } }
+				header=views.uniques+" Unique visitors";
+				yaxislabel="Unique visitors";
+				val0=list[0].uniques;
+				break;
+			}
+		xs=280.0/13.0;
+		ys=150.0/max;
+		hdc.strokeStyle='#07f';
+		hdc.moveTo(6.5*xs+xp,yt);
+		hdc.lineTo(6.5*xs+xp,yd+yt);
+		hdc.stroke();
+		hdc.strokeStyle='#444';
+		hdc.beginPath();
+		for (i=1;i<len-1;i++)
+			{
+			hdc.moveTo(xs*i+xp,yt);
+			hdc.lineTo(xs*i+xp,yd+yt);
+			}
+		hdc.stroke();
+		hdc.strokeStyle='#09f';
+		hdc.beginPath();
+		hdc.moveTo(xp,yd+yt);
+		hdc.lineTo(xs*13.0+xp,yd+yt);
+		hdc.lineTo(xs*13.0+xp,yt);
+		hdc.lineTo(xp,yt);
+		hdc.lineTo(xp,yd+yt);
+		hdc.stroke();
+		hdc.moveTo(xp,yd+yt);
+		hdc.strokeStyle='#ffff7f';
+		hdc.fillStyle='#ffffff';
+		//hdc.font="11px Tahoma";
+		//hdc.font="10px Arial";
+		hdc.font="10px Helvetica";
+		hdc.fillText(header,180.0-hdc.measureText(header).width/2,15.0);
+		for (i=0;i<len;i++)
+			{
+			var times=list[i].timestamp;
+			var day=times.substring(8,times.indexOf("T"));
+			if (day.charAt(0)==='0') { day=day.substring(1); }
+			var width=hdc.measureText(day).width;
+			hdc.fillText(day,xs*i+xp-width/2.0,yd+yt+12.0);
+			}
+		hdc.fillText(0,20,yd+yt+5.0);
+		hdc.fillText(max,20,yt+5.0);
+		//var m=hdc.measureText(yaxislabel);
+		//hdc.translate(m.width/2,6.0);
+		hdc.rotate(-Math.PI/2.0);
+		hdc.fillText(yaxislabel,lpos,40.0);
+		//hdc.fillText(yaxislabel,-125.0,-10.0);
+		//hdc.fillText(yaxislabel,-m.width*2.0,-10.0);
+		hdc.setTransform(1,0,0,1,0,0);
+		x=xp;
+		y=yd-ys*val0+yt;
+		hdc.beginPath(); hdc.moveTo(x,y);
+		switch (plot)
+			{
+			case 0:
+			case 2: for (i=1;i<len;i++) { x+=xs; hdc.lineTo(x,yd-ys*list[i].count+yt); } break;
+			case 1:
+			case 3: for (i=1;i<len;i++) { x+=xs; hdc.lineTo(x,yd-ys*list[i].uniques+yt); } break;
+			}
+		hdc.stroke();
+		}
+
+		function cgMouseMove(e) { mouseMove(e,0); }
+		function cugMouseMove(e) { mouseMove(e,1); }
+		function vgMouseMove(e) { mouseMove(e,2); }
+		function vugMouseMove(e) { mouseMove(e,3); }
+
+		function mouseMove(e,plot)
+		{
+		if (((plot===0)||(plot===1))&&(clones===undefined)) { return; }
+		if (((plot===2)||(plot===3))&&(views===undefined)) { return; }
+		var xd=300.0,xp=50.0,yd=150.0,yt=20.0;
+		var xs=280.0/13.0;
+		var ind;
+		e.preventDefault();
+		e.stopPropagation();
+		var rect=elems[plot].getBoundingClientRect();
+		var x=e.clientX-rect.left;
+		var y=e.clientY-rect.top;
+		if ((x<xp)||(x>280.0+50.0)||(y<yt)||(y>yt+yd)) { oldind=-1; tooltip.style.display="none"; return; }
+		ind=Math.floor((x-xp+xs/2.0)/xs);
+		if (ind<0) { ind=0; }
+		if (ind>=14) { ind=13; }
+		//console.log(ind);
+		if (ind!==oldind)
+			{
+			var times,num;
+			switch (plot)
+				{
+				case 0: times=clones.clones[ind].timestamp; num=clones.clones[ind].count; break;
+				case 1: times=clones.clones[ind].timestamp; num=clones.clones[ind].uniques; break;
+				case 2: times=views.views[ind].timestamp; num=views.views[ind].count; break;
+				case 3: times=views.views[ind].timestamp; num=views.views[ind].uniques; break;
+				}
+			var day=times.substring(5,times.indexOf("T"));
+			var day2=day.slice(0,2)+"/"+day.slice(3);
+			if (day2.charAt(0)==='0') { day2=day2.substring(1); }
+			tooltip.innerHTML="&nbsp;&nbsp;"+day2+"<br>&nbsp;&nbsp;Total: "+num+"&nbsp;&nbsp;";
+			tooltip.style.display="block";
+			oldind=ind;
+			}
+		tooltip.style.top=e.pageY+"px";
+		tooltip.style.left=e.pageX+10+"px";
+		}
+
+		function displayRefSites()
+		{
+		var html="<div class='tfont'><table style='color:#ffffff; border-collapse: collapse;' border=0 valign=center cellpadding=7>";
+		html+="<tr><th class='tth'>Site</th><th class='tth'>Views</th><th class='tth'>Unique Visitors</th></tr>";
+		for (i=0;i<popref.length;i++)
+			{
+			html+="<tr><td class='ttd'>"+popref[i].referrer+"</td><td class='ttd'>"+popref[i].count+"</td><td class='ttd'>"+popref[i].uniques+"</td></tr>";
+			}
+		html+="</table>";
+		if (popref.length===0) { html+="<br>No referring sites data available for this period"; }
+		html+="</div>";
+		var refs=traffic.document.getElementById('refSitesID');
+		refs.innerHTML=html;
+		}
+
+		function displayPopContents()
+		{
+		var html="<div class='tfont'><table style='color:#ffffff; border-collapse: collapse;' border=1 valign=center cellpadding=7>";
+		html+="<tr><th class='tth'>Content</th><th class='tth'>Views</th><th class='tth'>Unique Visitors</th></tr>";
+		for (i=0;i<poppaths.length;i++)
+			{
+			html+="<tr><td title='"+poppaths[i].path+"' class='ttd'>"+poppaths[i].title+"</td><td class='ttd'>"+poppaths[i].count+"</td><td class='ttd'>"+poppaths[i].uniques+"</td></tr>";
+			}
+		html+="</table>";
+		if (poppaths.length===0) { html+="<br>No popular content data available for this period"; }
+		html+="</div>";
+		var refs=traffic.document.getElementById('popContentsID');
+		refs.innerHTML=html;
+		}
+
+		function setupTraffic(name)
+		{
+		traffic=window.open("","_blank");
+		if (traffic)
+			{
+			clones=undefined; views=undefined;
+			html='<!DOCTYPE html><html><title>'+name+'</title><style>body { background-color: black; color: white; } .ttd { border: 1px solid #06e; border-collapse: collapse; } .ttdo { background-color: #270000; border: 1px solid #06e; border-collapse: collapse; } .ttdc { background-color: #002700; border: 1px solid #06e; border-collapse: collapse; } .tth { background-color: #00006F; border: 1px solid #06e; border-collapse: collapse; } .tfont { font-size: 12px; } .container { display: flex; flex-direction: row; } .tleft { display: flex; width: 410px; flex-direction: column; } .tright { display: flex; width: 410px; flex-direction: column; } .tooltip { position: absolute; display: none; background: #00007f; border: 1px solid #00bfff; padding: 5px; z-index: 1000; color: white; box-shadow: 7px 7px 7px rgba(0,0,0,0.75); border-radius: 8px; }</style><body><center><h2>'+name+'</h2></center>';
+			html+='<div id="graphToolTipID" class="tooltip"></div><div class="container"><div class="tleft"><div style="padding: 10px 0px 7px 0px;">Clones (last 14 days)</div><div><canvas id="cloneGraphID" width=360 height=200></div><div style="padding: 10px 0px 7px 0px;">Visitors (last 14 days)</div><div><canvas id="viewsGraphID" width=360 height=200></div><div style="padding: 10px 0px 7px 0px;">Referring sites</div><div id="refSitesID"></div></div><div class="tright"><div style="padding: 10px 0px 7px 0px;"><font color=#000000>Clones (last 14 days)</font></div><div><canvas id="cloneUniqueGraphID" width=360 height=200></div><div style="padding: 10px 0px 7px 0px;"><font color=#000000>Visitors (last 14 days)</font></div><div><canvas id="viewsUniqueGraphID" width=360 height=200></div><div style="padding: 10px 0px 7px 0px;">Popular Content</div><div id="popContentsID"></div></div></div>';
+			html+='<br><div class="container"><div class="tleft"><div style="padding: 10px 0px 7px 0px;">Issues (last 14 days)</div><div id="issues14DaysID"></div></div><div class="tright"><div style="padding: 10px 0px 7px 0px;">Pull Requests (last 14 days)</div><div id="pulls14DaysID"></div></div></div>';
+			html+="</body></html>";
+			traffic.document.open();
+			traffic.document.write(html);
+			traffic.document.close();
+			tooltip=traffic.document.getElementById('graphToolTipID');
+			cg=traffic.document.getElementById('cloneGraphID');
+			cug=traffic.document.getElementById('cloneUniqueGraphID');
+			vg=traffic.document.getElementById('viewsGraphID');
+			vug=traffic.document.getElementById('viewsUniqueGraphID');
+			elems=[cg,cug,vg,vug];
+			ccug=cug.getContext('2d');
+			cvug=vug.getContext('2d');
+			ccg=cg.getContext('2d');
+			cvg=vg.getContext('2d');
+			cg.onmousemove=cgMouseMove;
+			cug.onmousemove=cugMouseMove;
+			vg.onmousemove=vgMouseMove;
+			vug.onmousemove=vugMouseMove;
+			ccg.strokeStyle='#7f7f7f';
+			ccg.lineWidth=1;
+			ccg.strokeRect(0,0,cg.width,cg.height);
+			ccug.strokeStyle='#7f7f7f';
+			ccug.lineWidth=1;
+			ccug.strokeRect(0,0,cug.width,cug.height);
+			cvg.strokeStyle='#7f7f7f';
+			cvg.lineWidth=1;
+			cvg.strokeRect(0,0,vg.width,vg.height);
+			cvug.strokeStyle='#7f7f7f';
+			cvug.lineWidth=1;
+			cvug.strokeRect(0,0,vug.width,vug.height);
+			}
+		}
+
+		function getTrafficPat(user,reponame)
+		{
+		pat=prompt("Please enter your required Personal Access Token");
+		if (pat!==null)
+			{
+			getTraffic(user,reponame);
+			}
+		}
+
+		function getTraffic(user,reponame)
+		{
+		if (pat==="") { getTrafficPat(user,reponame); return; }
+		setupTraffic(reponame);
+		getClonesData("https://api.github.com/repos/"+user+"/"+reponame+"/traffic/clones");
+		getViewsData("https://api.github.com/repos/"+user+"/"+reponame+"/traffic/views");
+		getPopRefsData("https://api.github.com/repos/"+user+"/"+reponame+"/traffic/popular/referrers");
+		getPopPathsData("https://api.github.com/repos/"+user+"/"+reponame+"/traffic/popular/paths");
+		var ago=new Date();
+		ago.setDate(ago.getDate()-14);
+		var since=ago.toISOString();
+		getIssues14Days("https://api.github.com/repos/"+user+"/"+reponame+"/issues",since);
+		// the pulls endpoint doesn't have "since"
+		//getPulls14Days("https://api.github.com/repos/"+user+"/"+reponame+"/pulls",since);
+		// so have to use this, but this method won't allow time of day and
+		// timezone, so potentially some pull requests could be missed if they
+		// occur 14 days ago.  If you were to do this every week, the overlap
+		// would catch any missed pull requests.  Also it has a different
+		// rate limit quota.
+		//   OR: could do the pulls endpoint ("since" will be ignored if
+		// present) and filter client-side.  But let's do this instead:
+		since=ago.toISOString().split('T')[0];
+		getPulls14Days("https://api.github.com/search/issues?q=type:pr+repo:"+user+"/"+reponame+"+updated:>="+since);
+		}
 	</script>
 <div class="header" id="headerID">
 <div style="float:left">
 &nbsp;
-<input id="searchTextID" type="text" value="" maxlength="100" size=22 onkeypress='getRepoKeyb(event)' autofocus title="RepoOwner/RepoName or UserName or @{UserID} or SearchString">
+<input id="searchTextID" type="text" value="" maxlength="256" size=22 onkeypress='getRepoKeyb(event)' autofocus title="RepoOwner/RepoName or UserName or @{UserID} or SearchString">
 <input id="refID" type="text" value="" maxlength="100" size=8 title="Branch, Commit, or Tag name">
 <button id="contentsID" onclick="gotoRepo(event)" title="Get Contents (Press 'Shift' while clicking to go to the github.com page for the repo.  Press 'Ctrl' while clicking to process README.md for markdown and open on new tab)">Contents</button>
 <button id="branchesID" onclick="getBranches()" title="Get Branches">Branches</button>
