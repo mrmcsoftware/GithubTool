@@ -1438,6 +1438,11 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 						//console.log(cdata);
 						myAlert("<br><b><font color='#00ffff'>Ahead by: </font>"+cdata.ahead_by+"&nbsp;&nbsp;&nbsp;<font color='#00ffff'>Behind by: </font>"+cdata.behind_by+"&nbsp;&nbsp;&nbsp;<font color='#00ffff'>Total commits: </font>"+cdata.total_commits+"</b><br><br>","Commit Comparison With Parent:");
 						}
+					else { myAlert("<br><b>"+request2.response.message+"</b><br><br>","Error"); }
+					};
+				request2.onerror=function(e)
+					{
+					myAlert("<br><b>"+request2.responseText+"</b><br><br>","Error");
 					};
 				request2.send();
 				}
