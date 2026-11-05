@@ -75,6 +75,7 @@ you probably will need to escape the special characters, depending on your OS
   - **keepontop=false** - Don't always keep the control bar at top of screen
   - **openonly=true** - When listing repository issues or pulls, don't show closed items
   - **expandinput=true** - Expand the text input fields for wider screens
+  - **colorcodetrafficbutton=false** - Don't color code traffic button
   - **contents=`{string}`** - Display the contents of the specified ({string}) repository
   - **repo=`{string}`** - Display the contents of the specified ({string}) repository (same as **contents='{string}'**)
   - **ref=`{string}`** - Specify repository's branch, commit, or tag name if desired
@@ -296,9 +297,14 @@ Since I was forced to put authentication into these pages, I decided to add the
 equivalent of github.com's **Insights -> Traffic**.  To use this feature, add
 your username to the line in the **`github*.html`** files that contains
 **`var me="";`**.  Then when you list your repos, a **Traffic** button will
-appear on the Language/Stars/Forks line.  Here's some screenshots of this new
-feature (I think they look nicer than github.com's and they come up a lot faster
-too).
+appear on the Language/Stars/Forks line.  By default, the Traffic button will
+change color to indicate that you've viewed the analytics for that repo and
+whether there were clones in the last 7 days (green for yes, red for no).  This
+feature can be turned off by either using the URL parameter
+**colorcodetrafficbutton=false** or by editing **`github*.html`** to change
+**`colorCTButton=true`** to be **`false`** instead.  Here's some screenshots of
+the new traffic feature (I think they look nicer than github.com's and they
+come up a lot faster too).
 
 <img src="screenshottraf1.png">
 

@@ -98,7 +98,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		var noforks=false;
 		var cug,vug,c_g,vg,ccug,cvug,ccg,cvg,tooltip,elems;
 		var clones,views,poppaths,popref,issues,pulls;
-		var oldind=-1;
+		var oldind=-1,trafficButton,colorCTButton=true;
 		var traffic;
 
 		var me="";
@@ -129,6 +129,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		if (vObj.searchrepos) { document.getElementById("searchTextID").value=vObj.searchrepos; searchRepos(); }
 		if (vObj.searchusers) { document.getElementById("searchTextID").value=vObj.searchusers; searchUsers(); }
 		if (vObj.expandinput==="true") { document.getElementById("searchTextID").size=32; document.getElementById("refID").size=12; }
+		if (vObj.colorcodetrafficbutton==="false") { colorCTButton=false; }
 		}
 
 /*
@@ -887,7 +888,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 				if (data[i].stargazers_count>0) { $("#data-1").append("&nbsp;&nbsp;&nbsp;"+altc+"Stars: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data[i].stargazers_url+"\",\""+data[i].name+"\",\"Stargazers\")' style='color: "+colors[4]+"' title='Click to get a list of stargazers.'>"+data[i].stargazers_count+"</a>"); }
 				//if (data[i].forks_count>0) { $("#data-1").append("&nbsp;&nbsp;&nbsp;"+altc+"Forks: </font>"+data[i].forks_count); }
 				if (data[i].forks_count>0) { $("#data-1").append("&nbsp;&nbsp;&nbsp;"+altc+"Forks: </font><a href='javascript:void(0)' onClick='getEngagementLists(\""+data[i].forks_url+"\",\""+data[i].name+"\",\"Forkers\")' style='color: "+colors[4]+"' title='Click to get a list of forkers.'>"+data[i].forks_count+"</a>"); }
-				if (str===me) { $("#data-1").append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button onclick='getTraffic(\""+me+"\",\""+data[i].name+"\")'>Traffic</button>"); }
+				if (str===me) { $("#data-1").append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button onclick='getTraffic(\""+me+"\",\""+data[i].name+"\",this)'>Traffic</button>"); }
 				$("#data-1").append("<br>");
 				if (data[i].topics.length>0)
 					{
@@ -1149,6 +1150,19 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		function(data)
 		{
 		clones=data;
+		if (colorCTButton)
+			{
+			var wasCloned=false;
+			var i;
+			for (i=7;i<14;i++) { if (clones.clones[i].count>0) { wasCloned=true; break; } }
+			/*
+			if (wasCloned) { trafficButton.style.color="#00ff00"; }
+			else { trafficButton.style.color="#ff0000"; }
+			trafficButton.style.backgroundColor="#000000";
+			*/
+			if (wasCloned) { trafficButton.style.color="#20ff20"; trafficButton.style.backgroundColor="#002700"; }
+			else { trafficButton.style.color="#ff2022"; trafficButton.style.backgroundColor="#270000"; }
+			}
 		//console.log(clones);
 		plotGraph(ccg,0);
 		plotGraph(ccug,1);
@@ -1446,7 +1460,9 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		html+="<tr><th class='tth'>Content</th><th class='tth'>Views</th><th class='tth'>Unique Visitors</th></tr>";
 		for (i=0;i<poppaths.length;i++)
 			{
-			html+="<tr><td title='"+poppaths[i].path+"' class='ttd'>"+poppaths[i].title+"</td><td class='ttd'>"+poppaths[i].count+"</td><td class='ttd'>"+poppaths[i].uniques+"</td></tr>";
+			var lin=poppaths[i].title.lastIndexOf("/")+1;
+			var paths="<span style='color: #00ff00'>"+poppaths[i].title.substring(0,lin)+"</span>"+poppaths[i].title.substring(lin);
+			html+="<tr><td title='"+poppaths[i].path+"' class='ttd'>"+paths+"</td><td class='ttd'>"+poppaths[i].count+"</td><td class='ttd'>"+poppaths[i].uniques+"</td></tr>";
 			}
 		html+="</table>";
 		if (poppaths.length===0) { html+="<br>No popular content data available for this period"; }
@@ -1461,6 +1477,7 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 		if (traffic)
 			{
 			clones=undefined; views=undefined;
+			poppaths=[]; popref=[]; issues=[]; pulls=[];
 			html='<!DOCTYPE html><html><title>'+name+'</title><style>body { background-color: black; color: white; } .ttd { border: 1px solid #06e; border-collapse: collapse; } .ttdo { background-color: #270000; border: 1px solid #06e; border-collapse: collapse; } .ttdc { background-color: #002700; border: 1px solid #06e; border-collapse: collapse; } .tth { background-color: #00006F; border: 1px solid #06e; border-collapse: collapse; } .tfont { font-size: 12px; } .container { display: flex; flex-direction: row; } .tleft { display: flex; width: 410px; flex-direction: column; } .tright { display: flex; width: 410px; flex-direction: column; } .tooltip { position: absolute; display: none; background: #00007f; border: 1px solid #00bfff; padding: 5px; z-index: 1000; color: white; box-shadow: 7px 7px 7px rgba(0,0,0,0.75); border-radius: 8px; }</style><body><center><h2>'+name+'</h2></center>';
 			html+='<div id="graphToolTipID" class="tooltip"></div><div class="container"><div class="tleft"><div style="padding: 10px 0px 7px 0px;">Clones (last 14 days)</div><div><canvas id="cloneGraphID" width=360 height=200></div><div style="padding: 10px 0px 7px 0px;">Visitors (last 14 days)</div><div><canvas id="viewsGraphID" width=360 height=200></div><div style="padding: 10px 0px 7px 0px;">Referring sites</div><div id="refSitesID"></div></div><div class="tright"><div style="padding: 10px 0px 7px 0px;"><font color=#000000>Clones (last 14 days)</font></div><div><canvas id="cloneUniqueGraphID" width=360 height=200></div><div style="padding: 10px 0px 7px 0px;"><font color=#000000>Visitors (last 14 days)</font></div><div><canvas id="viewsUniqueGraphID" width=360 height=200></div><div style="padding: 10px 0px 7px 0px;">Popular Content</div><div id="popContentsID"></div></div></div>';
 			html+='<br><div class="container"><div class="tleft"><div style="padding: 10px 0px 7px 0px;">Issues (last 14 days)</div><div id="issues14DaysID"></div></div><div class="tright"><div style="padding: 10px 0px 7px 0px;">Pull Requests (last 14 days)</div><div id="pulls14DaysID"></div></div></div>';
@@ -1497,19 +1514,20 @@ GitHub Tool by Mark Craig (youtube.com/MrMcSoftware) Copyright &copy; 2023
 			}
 		}
 
-		function getTrafficPat(user,reponame)
+		function getTrafficPat(user,reponame,elem)
 		{
 		pat=prompt("Please enter your required Personal Access Token");
 		if (pat!==null)
 			{
 			$.ajaxSetup({headers: { "Authorization":"Bearer "+pat }});
-			getTraffic(user,reponame);
+			getTraffic(user,reponame,elem);
 			}
 		}
 
-		function getTraffic(user,reponame)
+		function getTraffic(user,reponame,elem)
 		{
-		if (pat==="") { getTrafficPat(user,reponame); return; }
+		if (pat==="") { getTrafficPat(user,reponame,elem); return; }
+		trafficButton=elem;
 		setupTraffic(reponame);
 		getClonesData("https://api.github.com/repos/"+user+"/"+reponame+"/traffic/clones");
 		getViewsData("https://api.github.com/repos/"+user+"/"+reponame+"/traffic/views");
